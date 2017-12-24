@@ -15,13 +15,19 @@
 #define B_BUFFER 1280
 #define VERSION "PRE-RELEASE 2017/12/23"
 
+#define CATEGORY 0
+#define FILES 1
+
 int str_sort(char string[][BUFFER], int size);
 void multi_strtolower(char string[][BUFFER], int size);
 void multi_strcpy(char dest[][BUFFER], char src[][BUFFER], int size);
 void multi_strclr(char string[][BUFFER], int size);
 void multi_strprint(char string[][BUFFER], int size);
 void tilldd_strcpy(char *dest, char *src);
+int afterdd_strcpytomulti(char dest[][BUFFER], char *src);
 int checkifexist(char *file);
+void strcpy_wonl(char *dest, char *src);
+void strcat_as(char *dest, char *add);
 
 void readfile(void);
 void createfile(void);
@@ -77,19 +83,122 @@ void add(int argc, char *argv[])
 		printf("Error: You must give at least one parameter\n");
 }
 
-/* Add tag */
+/* Add tags */
 void addtag(int argc, char *argv[])
 {
 	FILE *fp;
 
-	if (argc <= 3) {
-		printf("Error: You must state the tag\n");
+	/* File reading variables */
+	char flines[B_BUFFER][BUFFER];
+	int i = 0, j, k, total_tags;
+	char *line = NULL;
+	size_t len = 0;
+	int max;	/* File writing variable */
+
+	int mode = CATEGORY;
+	char strcompare[B_BUFFER];
+	char strtoformat[B_BUFFER];
+	char tagsofcategory[B_BUFFER][BUFFER];
+
+	/* Duplicate checking */
+	int duplicate = 0;
+	int validcategory = 0;
+
+	if (argc <= 4) {
+		printf("Error: You must state at least one tag and a category\n");
 		return;
 	}
-	if (fp = fopen("tags", "r+")) {
+	if (!(checkifexist("tags"))) {
+		printf("Error: You need to create a \"tags\" file first\n");
+		return;
+	}
+	fp = fopen("tags", "r");
+	while (getline(&line, &len, fp) != -1) {
+		/* newline changes to file mode */
+		if (strcmp(line,"\n") == 0)
+			mode = FILES;
+		if (mode == CATEGORY) {
+			tilldd_strcpy(strcompare, line);
+			/* accept if category not there */
+			if (strcmp(strcompare, argv[argc-1]) == 0)  {
+				validcategory = 1;
+				strcpy_wonl(strtoformat, line);
+				/* Gets tags (after the double dots) */
+				total_tags = afterdd_strcpytomulti(tagsofcategory, line);
+				/* Skips duplicate checking if 0 */
+				if (total_tags == 0) {
+					for (j=3; j<argc-1; j++) 
+						strcat_as(strtoformat, argv[j]);
+				} else {
+					for (j=3; j<argc-1; j++) {
+						/* Duplicate checking */
+						for (k=0; k<total_tags; k++) {
+							if (strcmp(tagsofcategory[k], argv[j]) == 0) {
+								printf("Duplicate \"%s\" won't be put in\n", tagsofcategory[k]);
+								duplicate = 1;
+								break;
+							}
+						}
+						if (duplicate == 0)
+							strcat_as(strtoformat, argv[j]);
+						duplicate = 0;
+					}
+				}
+				strcpy(flines[i++], strtoformat);
+			} else
+				strcpy(flines[i++], line);
+		} else	/* if FILES */
+			strcpy(flines[i++], line);
+		/* add in rest */
+	}
+	free(line);
+	fclose(fp);
+	max = i;
+	/* Write new modification to file */
+	if (validcategory == 1) {
+		fp = fopen("tags", "w");
+		for (i = 0; i < max; i++)
+			fprintf(fp, "%s", flines[i]); 
 		fclose(fp);
 	} else
-		printf("Error: You need to create a \"tags\" file first\n");
+		printf("The category provided isn't valid\n");
+}
+
+int afterdd_strcpytomulti(char dest[][BUFFER], char *src)
+{
+	int i=0;
+	/* Ignoring till colon */
+	while (*src++ != ':')
+		;
+	*src++;
+	for (int j=0; (dest[i][j] = *src) != '\0'; j++, *src++) {
+		if (*src == ' ' || *src == '\n') {
+			dest[i][j] = '\0';
+			i++;	/* value reset */
+			j = -1;
+		}
+	}
+	return i;	/* Number of tags */
+}
+
+/* Concatenate string plus space */
+void strcat_as(char *dest, char *add)
+{
+	while (*dest++ != '\0')
+		;
+	*--dest = ' ';
+	*++dest = ' ';
+	while ((*dest++ = *add++) != '\0')
+		;
+	*--dest = '\0';
+}
+
+/* Copy string without newline */
+void strcpy_wonl(char *dest, char *src)
+{
+	while ((*dest++ = *src++) != '\n')
+		;
+	*--dest = '\0';
 }
 
 /* Check if the file exists */
