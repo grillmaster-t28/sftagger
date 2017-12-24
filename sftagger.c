@@ -13,7 +13,7 @@
 
 #define BUFFER 256
 #define B_BUFFER 1280
-#define VERSION "PRE-RELEASE 2017/12/23"
+#define VERSION "PRE-RELEASE 2017/12/24"
 
 #define CATEGORY 0
 #define FILES 1
