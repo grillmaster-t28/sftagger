@@ -7,10 +7,10 @@ Written in C
 * File creation
 * Creating new categories and categories duplication checking
 * Creating new tags to a category and tags duplication checking
+* Adding tags to files and tags duplication checking
 
 ## TODO
 * File updating
-* Adding tags to files and tags duplication checking
 * List out tags of its category
 * Tags searching
 * Files printout via tags
