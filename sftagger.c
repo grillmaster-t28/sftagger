@@ -15,7 +15,7 @@
 #define BUFFER 256
 #define B_BUFFER 1280
 
-#define VERSION "PRE-RELEASE 2017/12/25"
+#define VERSION "PRE-RELEASE 2017/12/26"
 
 #define CATEGORY 0
 #define FILES 1
@@ -23,7 +23,7 @@
 #define FALSE 0
 #define TRUE 1
 
-int str_sort(char string[][BUFFER], int size);
+int str_sort(char string[][BUFFER], int size, int type);
 void multi_strtolower(char string[][BUFFER], int size);
 void multi_strcpy(char dest[][BUFFER], char src[][BUFFER], int size);
 void multi_strclr(char string[][BUFFER], int size);
@@ -39,11 +39,14 @@ int gettags_wfilter(int numtags[BUFFER], char alltags[][BUFFER], char *filename,
 void strcpy_qm(char *dest, char *src);
 int * intcpy(int *src, size_t len);
 int hasspace(char *src);
+int dirtomstr(char *dirname, char dest[][BUFFER]);
+void writefile(char *filename, char flines[][BUFFER], int max);
 
 void readfile(void);
 void createfile(void);
+void updatefile(void);
 void add(int argc, char *argv[]);
-void addtag(int argc, char *argv[]);
+void addtags(int argc, char *argv[]);
 void addcategory(int argc, char *argv[]);
 void addtagstofile(int argc, char *argv[]);
 void usage(void);
@@ -61,6 +64,8 @@ int main(int argc, char *argv[])
 			usage();
 		else if (strcmp(argv[1], "add") == 0)
 			add(argc, argv);
+		else if (strcmp(argv[1], "update") == 0)
+			updatefile();
 		else
 			usage();
 	} else
@@ -86,20 +91,20 @@ void readfile(void)
 void add(int argc, char *argv[])
 {
 	if (argc > 2) {
-		if (strcmp(argv[2], "tag") == 0)
-			addtag(argc, argv);
+		if (strcmp(argv[2], "tags") == 0)
+			addtags(argc, argv);
 		else if (strcmp(argv[2], "category") == 0)
 			addcategory(argc, argv);
 		else if (strcmp(argv[2], "tags-to") == 0)
 			addtagstofile(argc, argv);
 		else
-			printf("Error: You must give: {tag | category | tags-to}\n");
+			printf("Error: You must give: {tags | category | tags-to}\n");
 	} else
 		printf("Error: You must give at least one parameter\n");
 }
 
 /* Add tags */
-void addtag(int argc, char *argv[])
+void addtags(int argc, char *argv[])
 {
 	FILE *fp;
 
@@ -169,13 +174,8 @@ void addtag(int argc, char *argv[])
 	}
 	free(line);
 	fclose(fp);
-	max = i;
-	/* Write new modification to file */
 	if (validcategory == 1) {
-		fp = fopen("tags", "w");
-		for (i = 0; i < max; i++)
-			fprintf(fp, "%s", flines[i]); 
-		fclose(fp);
+		writefile("tags", flines, i);
 	} else
 		printf("The category provided isn't valid\n");
 }
@@ -318,12 +318,7 @@ void addcategory(int argc, char *argv[])
 	}	
 	free(line);
 	fclose(fp);
-	max = i;
-	/* Write new modification to file */
-	fp = fopen("tags", "w");
-	for (i = 0; i < max; i++)
-		fprintf(fp, "%s", flines[i]); 
-	fclose(fp);
+	writefile("tags", flines, i);
 }
 
 void tilldd_strcpy(char *dest, char *src)
@@ -443,12 +438,7 @@ void addtagstofile(int argc, char *argv[])
 
 	free(line);
 	fclose(fp);
-	max = i;
-	/* Write new modification to file */
-	fp = fopen("tags", "w");
-	for (i = 0; i < max; i++)
-		fprintf(fp, "%s", flines[i]); 
-	fclose(fp);
+	writefile("tags", flines, i);
 }
 
 int gettags_wfilter(int numtags[BUFFER], char curtags[][BUFFER], char *filename, int ctagstotal)
@@ -464,7 +454,7 @@ int gettags_wfilter(int numtags[BUFFER], char curtags[][BUFFER], char *filename,
 	int i, j, k=0, n=0;
 	int ltagstotal;			/* Max item value of in-line tags */
 
-	if (!(checkifexist("tags"))) 
+	if (!(checkifexist(filename))) 
 		return -1;		/* File reading error */
 
 	fp = fopen(filename, "r");
@@ -507,15 +497,93 @@ void fnol_strcpy(char *dest, char *src)
 	*dest = '\0';
 }
 
+/* Updates the file
+ * NOTE: Does not take away deleted files, just adds in new ones
+ */
+void updatefile(void)
+{
+	FILE *fp;
+
+	/* File reading variables */
+	char flines[B_BUFFER][BUFFER];
+	int i = 0, max, j, k;
+	char *line = NULL;
+	size_t len = 0;
+
+	int mode = CATEGORY;
+	char *filenameofline;
+
+	/* Directory variables */
+	int newmax = 0;
+	int oldmax = 0;
+	char updatedls[B_BUFFER][BUFFER];
+	char oldls[B_BUFFER][BUFFER];
+	char qmoldls[BUFFER];
+
+	/* Sorting variables */
+	int out;
+
+	if (!(checkifexist("tags"))) {
+		printf("Error: You need to create a \"tags\" file first\n");
+		return;
+	}
+
+	fp = fopen("tags", "r");
+	newmax = dirtomstr("./", updatedls);
+	while (getline(&line, &len, fp) != -1) {
+		if (strcmp(line, "\n") == 0)
+			mode = FILES;
+		else if (mode == FILES) {
+			fnol_strcpy(oldls[j], line);
+			if (hasspace(oldls[j])) {
+				strcpy_qm(qmoldls, oldls[j]);
+				strcpy(oldls[j], qmoldls);
+			}
+			j++;
+		}
+		strcpy(flines[i++], line);
+	}
+	free(line);
+	fclose(fp);
+	max = i;
+	oldmax = j;
+	/* Ruling out not new files */
+	for (i=0; i<newmax; i++)
+		for (j=0; j<oldmax; j++) 
+			if (strcmp(updatedls[i], oldls[j]) == 0)
+				strcpy(updatedls[i], ".");	/* Not new */
+	/* Putting in new files */
+	for (i=0; i<newmax; i++)
+		if (strcmp(updatedls[i], ".") != 0) {		/* Is new */
+			strcat(updatedls[i], "\n");
+			strcpy(flines[max++], updatedls[i]);
+		}
+	/* Sorts the file strings */
+	out = str_sort(flines, max, 1);
+	if (out == -1) {
+		printf("Error: Unable to sort (can't find a newline in between"
+				" the categories and filenames)\n");
+		return;
+	}
+	writefile("tags", flines, max);
+}
+
+/* Write new modification to file */
+void writefile(char *filename, char flines[][BUFFER], int max)
+{
+	FILE *fp;
+
+	fp = fopen("tags", "w");
+	for (int i = 0; i < max; i++)
+		fprintf(fp, "%s", flines[i]); 
+	fclose(fp);
+}
+
 /* Creates a new tags file */
 void createfile(void)
 {
 	/* File writing */
 	FILE *fp;
-
-	/* Directory reading */
-	DIR *dp;
-	struct dirent *ep;
 
 	/* Checking */
 	int matches;
@@ -540,46 +608,65 @@ void createfile(void)
 	} 
 
 	fp = fopen("tags", "w+");	/* Make file "tags" */
-	dp = opendir("./");
-	if (dp != NULL) {
-		itr = 0;
-		while (ep = readdir(dp)) {
-			if (hasspace(ep->d_name))
-				strcpy_qm(ep_dname_ls[itr++], ep->d_name);
-			else
-				strcpy(ep_dname_ls[itr++], ep->d_name);
-		}
-		upto = str_sort(ep_dname_ls, itr);
+	itr = dirtomstr("./", ep_dname_ls);
+	if (itr == -1)
+		perror("Couldn't open current directory");
+	else {
+		upto = str_sort(ep_dname_ls, itr, 0);
 		/* Category placeholder */
 		fprintf(fp, "category: placeholder\n\n");
 		for (itr = 0; itr < upto; itr++) 
 			fprintf(fp, "%s\n", ep_dname_ls[itr]);
-		(void) closedir(dp);
-	} else
-		perror("Couldn't open current directory");
+	}
 	
 	fclose(fp);
 }
 
-int str_sort(char string[][BUFFER], int or_size)
+int dirtomstr(char *dirname, char dest[][BUFFER])
+{
+	/* Directory reading */
+	DIR *dp;
+	struct dirent *ep;
+	int itr = 0;
+
+	dp = opendir(dirname);
+	if (dp != NULL) {
+		while (ep = readdir(dp)) {
+			if (hasspace(ep->d_name))
+				strcpy_qm(dest[itr++], ep->d_name);
+			else if (ep->d_name[0] != '.' && 
+					strcmp(ep->d_name, "tags") != 0)
+				strcpy(dest[itr++], ep->d_name);
+				/* file not . or itself */
+		}
+		(void) closedir(dp);
+		return itr;
+	} else
+		return -1;
+}
+
+int str_sort(char string[][BUFFER], int or_size, int type)
 {
 	int i, j, matches;
 	char temp[BUFFER];
-	char lowerstr[B_BUFFER][BUFFER], newstring[B_BUFFER][BUFFER];
-	for (i=0,j=0; i<or_size; i++) {
-		/* file not . or itself */
-		matches = strcmp(string[i], "tags");
-		if (string[i][0] != '.' && matches != 0) 
-			strcpy(newstring[j++], string[i]);
+	char lowerstr[B_BUFFER][BUFFER];
+	int size, min;
+	if (type == 0) 
+		min = 0;
+	else if (type == 1) {		/* Has full file strings */
+		for (i=0; i<or_size; i++)
+			if (strcmp(string[i], "\n") == 0)
+				break;
+		if (i >= or_size-1)
+			return -1;	/* Error */
+		size = or_size;
+		min = i;
 	}
-	int size = j;
-	multi_strclr(string, size);
-	multi_strcpy(string, newstring, size);
 	multi_strcpy(lowerstr, string, size);
 	multi_strtolower(lowerstr, size);
 	/* Multi string sorting */
-	for (i=0; i<size; i++) 
-		for (j=0; j<size-1; j++) 
+	for (i=min; i<size; i++) 
+		for (j=min; j<size-1; j++) 
 			/* Swap */
 			if (strcmp(lowerstr[j], lowerstr[j+1]) > 0) {
 				strcpy(temp, string[j]);
@@ -647,6 +734,6 @@ int hasspace(char *src)
 
 void usage(void)
 {
-	printf("usage: {create | read | version | help | add {category | tag | tags-to}}\n");
+	printf("usage: {create | read | version | help | add {category | tags | tags-to}}\n");
 }
 
