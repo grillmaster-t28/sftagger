@@ -49,6 +49,7 @@ void add(int argc, char *argv[]);
 void addtags(int argc, char *argv[]);
 void addcategory(int argc, char *argv[]);
 void addtagstofile(int argc, char *argv[]);
+void searchtags(int argc, char *argv[]);
 void usage(void);
 
 int main(int argc, char *argv[])
@@ -66,6 +67,8 @@ int main(int argc, char *argv[])
 			add(argc, argv);
 		else if (strcmp(argv[1], "update") == 0)
 			updatefile();
+		else if (strcmp(argv[1], "search") == 0)
+			searchtags(argc, argv);
 		else
 			usage();
 	} else
@@ -101,6 +104,82 @@ void add(int argc, char *argv[])
 			printf("Error: You must give: {tags | category | tags-to}\n");
 	} else
 		printf("Error: You must give at least one parameter\n");
+}
+
+void searchtags(int argc, char *argv[])
+{
+	FILE *fp;
+
+	/* File reading variables */
+	char slines[B_BUFFER][BUFFER];
+	int i = 0, j, k = 0, total_tags;
+	char *line = NULL;
+	size_t len = 0;
+	int mode = CATEGORY;
+
+	/* Tags filtering */
+	int tags_amount;
+	int tagsnums[BUFFER];
+	char tagstosearch[B_BUFFER][BUFFER];
+
+	/* In-line variables */
+	int ltagstotal = 0;
+	char linetags[B_BUFFER][BUFFER];
+	char str_num[BUFFER];
+	int filematches = 0;
+
+	/* Printing variables */
+	char dline[BUFFER];
+
+	if (argc <= 2) {
+		printf("Error: You must state at least one tag\n");
+		return;
+	}
+	if (!(checkifexist("tags"))) {
+		printf("Error: You need to create a \"tags\" file first\n");
+		return;
+	}
+
+	for (i=0; i<argc-2; i++)
+		strcpy(tagstosearch[i], argv[i+2]);
+	/* Get and exclude tags in file as well as assign to number */
+	tags_amount = gettags_wfilter(tagsnums, tagstosearch, "tags", argc-2);
+
+	fp = fopen("tags", "r");
+	while (getline(&line, &len, fp) != -1) {
+		if (strcmp(line, "\n") == 0)
+			mode = FILES;
+		else if (mode == FILES) {
+			ltagstotal = afterddff_strcpytomulti(linetags, line, 1);
+			if (ltagstotal > 0) {
+				filematches = 0;
+				for (i=0; i<ltagstotal; i++) {
+					for (j=0; j<tags_amount; j++) {
+						sprintf(str_num, "%d", tagsnums[j]);
+						if (strcmp(linetags[i], str_num) == 0) {
+							filematches++;
+							break;
+						}
+					}
+				}
+				if (filematches == tags_amount)
+					fnol_strcpy(slines[k++], line);
+			}
+		}
+	}
+	free(line);
+	fclose(fp);
+	if (k == 0)
+		printf("Notice: No files found with the tags given\n");
+	else {
+		for (i=0; i<k; i++) {
+			if (hasspace(slines[i])) {
+				printf("\"%s\" ", slines[i]);
+			} else
+				printf("%s ", slines[i]);
+		}
+		putchar('\n');
+	}
 }
 
 /* Add tags */
@@ -197,7 +276,7 @@ int afterddff_strcpytomulti(char dest[][BUFFER], char *src, int mode)
 	}
 	while (*src++ != ignoretill)
 		;
-	if (mode == 0)
+	if (mode == 0 || ignoretill == '"')
 		*src++;
 
 	for (int j=0; (dest[i][j] = *src) != '\0'; j++, *src++) {
@@ -645,21 +724,20 @@ int dirtomstr(char *dirname, char dest[][BUFFER])
 		return -1;
 }
 
-int str_sort(char string[][BUFFER], int or_size, int type)
+int str_sort(char string[][BUFFER], int size, int type)
 {
 	int i, j, matches;
 	char temp[BUFFER];
 	char lowerstr[B_BUFFER][BUFFER];
-	int size, min;
+	int min;
 	if (type == 0) 
 		min = 0;
 	else if (type == 1) {		/* Has full file strings */
-		for (i=0; i<or_size; i++)
+		for (i=0; i<size; i++)
 			if (strcmp(string[i], "\n") == 0)
 				break;
-		if (i >= or_size-1)
+		if (i >= size-1)
 			return -1;	/* Error */
-		size = or_size;
 		min = i;
 	}
 	multi_strcpy(lowerstr, string, size);
@@ -734,6 +812,7 @@ int hasspace(char *src)
 
 void usage(void)
 {
-	printf("usage: {create | read | version | help | add {category | tags | tags-to}}\n");
+	printf("usage: {create | read | version | help | search | "
+			"add {category | tags | tags-to}}\n");
 }
 
