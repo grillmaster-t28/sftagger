@@ -3,11 +3,12 @@ A Simple File Tagging tool written in C
 
 ## Using search
 `sftagger search foo | xargs -o sxiv`
+
 Replace `foo` with your searches and `sxiv` with your program of choice
 
 ## Installation
-`gcc -o sftagger sftagger.c`
-`sudo cp sftagger /usr/local/bin/.`
+* `gcc -o sftagger sftagger.c`
+* `sudo cp sftagger /usr/local/bin/.`
 
 ## DONE
 * File creation
