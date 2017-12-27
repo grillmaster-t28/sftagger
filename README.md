@@ -1,27 +1,59 @@
 # sftagger
-A Simple File Tagging tool written in C
-
-## Using search
-`sftagger search foo | xargs -o sxiv`
-
-Replace `foo` with your searches and `sxiv` with your program of choice
+A simple file tagging tool written in C
 
 ## Installation
-* `gcc -o sftagger sftagger.c`
-* `sudo cp sftagger /usr/local/bin/.`
+Enter the following command to build and install sftagger (if necessary as root):
+* `make clean install`
 
-## DONE
-* File creation
-* Creating new categories and categories duplication checking
-* Creating new tags to a category and tags duplication checking
-* Adding tags to files and tags duplication checking
-* File updating (Only adds new, doesn't remove deleted)
-* Search files via tags
+## Usage
+* `sftagger create` - Creates/overwrites the tags file
+* `sftagger update` - Updates the tags file
+* `sftagger add category` - Make new category/categories
+* `sftagger add tags` - Make new tags append to a category, EX:
+* `sftagger add tags small big size` - `small big` are the tags, `size` are the category
+* `sftagger add tags-to` - Appends tags to the files given, EX:
+* `sftagger add tags-to *.png` - `*.png` are all the files with `.png` extension
+* `sftagger list categories` - Lists categories
+* `sftagger list tags-of` - Lists tags of the category given, EX:
+* `sftagger list tags-of size` - `size` are the category
 
-## TODO
-* List out categories
-* List out tags of its category
+### Using search
+* `sftagger search foo | xargs -o sxiv`
+
+Replace `foo` with your searches (can be more than one keyword(s)) and `sxiv` with your program of choice
+
+## Dependencies
+* C compiler (C99)
+* libc (recommend: C99 and POSIX >= 200809)
+
+## Tested on
+* Linux (Debian Unstable GNU/Linux - 2017/12/27)
+
+## TODO (For future releases)
 * Output the category of the tag given
 * Remove lines of unfounded files (As a separate command: `sftagger remove leftover`)
 * Optional: Include files inside a child directory upon file creation/update
+
+## Changelog
+### PRE-RELEASE
+#### 2017/12/27 (1.0 RC1)
+* Bug fix: Fixed line not fully cleared
+* Added: ability to list out categories
+* Added: ability to list out tags of its category
+* Portability: Used fgets over getline
+* Makefile now included
+* More documented README
+#### 2017/12/26
+* Added: files searching via tags
+* Added: file updating (Only adds new, doesn't remove deleted/unfounded)
+#### 2017/12/25
+* Added: tags adding to files and tags duplication checking
+#### 2017/12/24
+* Added: new tags creation to a category and tags duplication checking
+#### 2017/12/23
+* Added: new categories creation and categories duplication checking
+* Added: "tags" file creation
+
+## Release Candidates and pre-releases
+Those need further testing and source code checking until ready for a release
 
