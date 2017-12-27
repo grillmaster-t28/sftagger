@@ -1,6 +1,8 @@
 # sftagger
 A simple file tagging tool written in C
 
+Current Version: 2017/12/28 (1.0 RC2)
+
 ## Installation
 Enter the following command to build and install sftagger (if necessary as root):
 * `make clean install`
@@ -16,6 +18,10 @@ Enter the following command to build and install sftagger (if necessary as root)
 * `sftagger list categories` - Lists categories
 * `sftagger list tags-of` - Lists tags of the category given, EX:
 * `sftagger list tags-of size` - `size` are the category
+* `sftagger list all` - Lists all categories and tags
+* `sftagger read` - outputs entire file of tags
+* `sftagger version` - outputs the current version
+* `sftagger help` - outputs the usage commands
 
 ### Using search
 * `sftagger search foo | xargs -o sxiv`
@@ -27,15 +33,24 @@ Replace `foo` with your searches (can be more than one keyword(s)) and `sxiv` wi
 * libc (recommend: C99 and POSIX >= 200809)
 
 ## Tested on
-* Linux (Debian Unstable GNU/Linux - 2017/12/27)
+* Linux (Debian Testing GNU/Linux - 2017/12/28)
 
 ## TODO (For future releases)
 * Output the category of the tag given
+* Removing tags
+* Removing categories
+* Removing tags from each file
+* File overwrite, without overriding the categories/tags
 * Remove lines of unfounded files (As a separate command: `sftagger remove leftover`)
+* Inherited subcategories (Not sure how it will be implemented yet)
 * Optional: Include files inside a child directory upon file creation/update
 
 ## Changelog
-### PRE-RELEASE
+### 1.0
+#### 2017/12/28 (1.0 RC2)
+* Bug fix: Tag adding: Numbers not being updated
+* Bug fix: Tag adding: Duplication not checked outside of its category
+* Added: ability to list out of all both categories and tags
 #### 2017/12/27 (1.0 RC1)
 * Bug fix: Fixed line not fully cleared
 * Added: ability to list out categories
@@ -43,6 +58,7 @@ Replace `foo` with your searches (can be more than one keyword(s)) and `sxiv` wi
 * Portability: Used fgets over getline
 * Makefile now included
 * More documented README
+### PRE-RELEASE
 #### 2017/12/26
 * Added: files searching via tags
 * Added: file updating (Only adds new, doesn't remove deleted/unfounded)
