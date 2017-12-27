@@ -346,7 +346,7 @@ void addtags(int argc, char *argv[])
 						}
 						if (duplicate == 0)
 							strcat_as(strtoformat, argv[j]);
-					duplicate = 0;
+						duplicate = 0;
 					}
 				}
 				dubcheck = i;
