@@ -15,13 +15,18 @@
 #define BUFFER 256
 #define B_BUFFER 1280
 
-#define VERSION "PRE-RELEASE 2017/12/28 (1.0 RC2)"
+#define VERSION "PRE-RELEASE 2017/12/29 (1.0 RC3)"
+#define FILETARGET "tags"
 
-#define CATEGORY 0
-#define FILES 1
-
-#define FALSE 0
-#define TRUE 1
+enum {
+	CATEGORY,
+	FILES,
+	FALSE = 0,
+	TRUE,
+	CATS = 0,
+	TAGS,
+	CATS_TAGS
+};
 
 int str_sort(char string[][BUFFER], int size, int type);
 void multi_strtolower(char string[][BUFFER], int size);
@@ -30,18 +35,19 @@ void multi_strclr(char string[][BUFFER], int size);
 void multi_strprint(char string[][BUFFER], int size);
 void tilldd_strcpy(char *dest, char *src);
 int afterddff_strcpytomulti(char dest[][BUFFER], char *src, int mode);
-void multistrcat(char dest[][BUFFER], char src[][BUFFER], int start, int end);
-int checkifexist(char *file);
+int checkifexist(char *filename);
 void strcpy_wonl(char *dest, char *src);
 void strcat_as(char *dest, char *add);
-void fnol_strcpy(char *dest, char *src);
-int gettags_wfilter(int numtags[BUFFER], char alltags[][BUFFER], char *filename, int ctagstotal);
-void strcpy_qm(char *dest, char *src);
+void getfname(char *dest, char *src);
+int gettags_wfilt(int numtags[BUFFER], char alltags[][BUFFER], int ctagstotal);
 int * intcpy(int *src, size_t len);
 int hasspace(char *src);
 int dirtomstr(char *dirname, char dest[][BUFFER]);
-void writefile(char *filename, char flines[][BUFFER], int max);
+void writefile(char flines[][BUFFER], int max);
 void rmdubspaces(char *dest, char *src);
+int checkdup(char src_a[][BUFFER], char *src_b, int a_limit);
+void getchange(int *min, int *addby, int max, char *argv[]);
+void rm_rejects(char *src, int limit, char *src_b, char reject[][BUFFER]);
 
 void readfile(void);
 void createfile(void);
@@ -76,8 +82,9 @@ int main(int argc, char *argv[])
 			list(argc, argv);
 		else
 			usage();
-	} else
+	} else {
 		usage();
+	}
 	return 0;
 }
 
@@ -91,24 +98,31 @@ void add(int argc, char *argv[])
 		else if (strcmp(argv[2], "tags-to") == 0)
 			addtagstofile(argc, argv);
 		else
-			printf("Error: You must give: {tags | category | tags-to}\n");
-	} else
-		printf("Error: You must give at least one parameter: {tags | category | tags-to}\n");
+			printf("Error: You must give: {tags | category |"
+					" tags-to}\n");
+	} else {
+		printf("Error: You must give at least one parameter: {tags"
+				" | category | tags-to}\n");
+	}
 }
 
 void list(int argc, char *argv[])
 {
 	if (argc > 2) {
 		if (strcmp(argv[2], "categories") == 0)
-			listcattags(argc, argv, 0);
+			listcattags(argc, argv, CATS);
 		else if (strcmp(argv[2], "tags-of") == 0)
-			listcattags(argc, argv, 1);
+			listcattags(argc, argv, TAGS);
 		else if (strcmp(argv[2], "all") == 0)
-			listcattags(argc, argv, 2);
-		else
-			printf("Error: You must give: {categories | tags-of | all}\n");
-	} else
-		printf("Error: You must give at least one parameter: {categories | tags-of | all}\n");
+			listcattags(argc, argv, CATS_TAGS);
+		else {
+			printf("Error: You must give: {categories | tags-of |"
+					" all}\n");
+		}
+	} else {
+		printf("Error: You must give at least one parameter:"
+				" {categories | tags-of | all}\n");
+	}
 }
 
 void listcattags(int argc, char *argv[], int type)
@@ -119,28 +133,38 @@ void listcattags(int argc, char *argv[], int type)
 	char category[B_BUFFER];
 	int i;
 
-	if ((fp = fopen("tags", "r")) != NULL) {
-		while (fgets(line, B_BUFFER, fp) != NULL) {
-			if (strcmp(line, "\n") == 0)
-				break;
-			tilldd_strcpy(category, line);
-			if (type == 0)
-				printf("%s ", category);
-			else if (type == 1) {
-				for (i=3; i<argc; i++)
-					if (strcmp(category, argv[i]) == 0) {
-						printf("%s", line);
-						break;
-					}
-			} else if (type == 2)
-				printf("%s", line);
-			memset(line, 0, sizeof line);
-		}
-		if (type == 0)
-			putchar('\n');
-		fclose(fp);
-	} else
+	fp = fopen(FILETARGET, "r");
+	if (fp == NULL) {
 		printf("File \"tags\" doesn't exit in current directory\n");
+		return;
+	}
+	while (fgets(line, B_BUFFER, fp) != NULL) {
+		if (strcmp(line, "\n") == 0)
+			break;
+		tilldd_strcpy(category, line);
+		switch (type) {
+		case CATS:
+			printf("%s ", category);
+			break;
+		case TAGS:
+			for (i=3; i<argc; i++)
+				if (strcmp(category, argv[i]) == 0) {
+					printf("%s", line);
+					break;
+				}
+			break;
+		case CATS_TAGS:
+			printf("%s", line);
+			break;
+		default:
+			printf("Debug: listcattags: Wrong type used\n");
+			return;
+		}
+		memset(line, 0, sizeof line);
+	}
+	if (type == CATS)
+		putchar('\n');
+	fclose(fp);
 }
 
 void readfile(void)
@@ -148,14 +172,16 @@ void readfile(void)
 	FILE *fp;
 	char line[B_BUFFER];
 
-	if ((fp = fopen("tags", "r")) != NULL) {
-		while (fgets(line, B_BUFFER, fp) != NULL) {
-			printf("%s", line);
-			memset(line, 0, sizeof line);
-		}
-		fclose(fp);
-	} else 
+	fp = fopen(FILETARGET, "r");
+	if (fp == NULL) {
 		printf("File \"tags\" doesn't exit in current directory\n");
+		return;
+	}
+	while (fgets(line, B_BUFFER, fp) != NULL) {
+		printf("%s", line);
+		memset(line, 0, sizeof line);
+	}
+	fclose(fp);
 }
 
 void searchtags(int argc, char *argv[])
@@ -169,9 +195,9 @@ void searchtags(int argc, char *argv[])
 	int mode = CATEGORY;
 
 	/* Tags filtering */
-	int tags_amount;
-	int tagsnums[BUFFER];
-	char tagstosearch[B_BUFFER][BUFFER];
+	int maxtags;
+	int ftagsnums[BUFFER];
+	char ftagsnames[B_BUFFER][BUFFER];
 
 	/* In-line variables */
 	int ltagstotal = 0;
@@ -183,51 +209,119 @@ void searchtags(int argc, char *argv[])
 		printf("Error: You must state at least one tag\n");
 		return;
 	}
-	if (!(checkifexist("tags"))) {
+	if (!(checkifexist(FILETARGET))) {
 		printf("Error: You need to create a \"tags\" file first\n");
 		return;
 	}
 
 	for (i=0; i<argc-2; i++)
-		strcpy(tagstosearch[i], argv[i+2]);
+		strcpy(ftagsnames[i], argv[i+2]);
 	/* Get and exclude tags in file as well as assign to number */
-	tags_amount = gettags_wfilter(tagsnums, tagstosearch, "tags", argc-2);
+	maxtags = gettags_wfilt(ftagsnums, ftagsnames, argc-2);
 
-	fp = fopen("tags", "r");
+	fp = fopen(FILETARGET, "r");
 	while (fgets(line, B_BUFFER, fp) != NULL) {
-		if (strcmp(line, "\n") == 0)
+		if (strcmp(line, "\n") == 0) {
 			mode = FILES;
-		else if (mode == FILES) {
-			ltagstotal = afterddff_strcpytomulti(linetags, line, 1);
-			if (ltagstotal > 0) {
-				filematches = 0;
-				for (i=0; i<ltagstotal; i++) {
-					for (j=0; j<tags_amount; j++) {
-						sprintf(str_num, "%d", tagsnums[j]);
-						if (strcmp(linetags[i], str_num) == 0) {
-							filematches++;
-							break;
-						}
-					}
+			goto reset_line;
+		} else if (mode == CATEGORY) {
+			goto reset_line;
+		}
+		ltagstotal = afterddff_strcpytomulti(linetags, line, 1);
+		if (ltagstotal == 0)
+			goto reset_line;
+
+		filematches = 0;
+		for (i=0; i<ltagstotal; i++) {
+			for (j=0; j<maxtags; j++) {
+				sprintf(str_num, "%d", ftagsnums[j]);
+				if (strcmp(linetags[i], str_num) == 0) {
+					filematches++;
+					break;
 				}
-				if (filematches == tags_amount)
-					fnol_strcpy(slines[k++], line);
 			}
 		}
+		if (filematches == maxtags)
+			getfname(slines[k++], line);
+reset_line:
 		memset(line, 0, sizeof line);
 	}
 	fclose(fp);
-	if (k == 0)
+	if (k == 0) {
 		printf("Notice: No files found with the tags given\n");
-	else {
-		for (i=0; i<k; i++) {
-			if (hasspace(slines[i])) {
-				printf("\"%s\" ", slines[i]);
-			} else
-				printf("%s ", slines[i]);
-		}
-		putchar('\n');
+		return;
 	}
+
+	/* Outputs out result of the search */
+	for (i=0; i<k; i++) {
+		if (hasspace(slines[i])) {
+			printf("\"%s\" ", slines[i]);
+		} else
+			printf("%s ", slines[i]);
+	}
+	putchar('\n');
+}
+
+void getchange(int *min, int *addby, int max, char *argv[])
+{
+	FILE *fp;
+	char line[B_BUFFER];
+
+	int j, k, l=0, m=0;
+	int needmod = 0;	/* If it need modification */
+	char strcompare[B_BUFFER];
+	char linetags[B_BUFFER][BUFFER];
+	int maxtags;
+
+	fp = fopen(FILETARGET, "r");
+	while (fgets(line, B_BUFFER, fp) != NULL) {
+		if (strcmp(line, "\n") == 0)
+			break;
+		tilldd_strcpy(strcompare, line);
+		maxtags = afterddff_strcpytomulti(linetags, line, 0);
+		if (needmod == 1) {
+			for (j=0; j<maxtags; m++, l++, j++) {
+				for (k=3; k<max; k++) {
+					if (strcmp(argv[k], linetags[j]) == 0)
+						break;
+				}
+				if (k == max) {	/* Not a duplicate */
+					*min = m;
+					*addby = l-m;
+					return;		/* End variable */
+				} else
+					l--;
+			}
+		} else {
+			for (j=0; j<maxtags; j++) {
+				for (k=3; k<max; k++) {
+					if (strcmp(argv[k], linetags[j]) == 0)
+						break;
+				}	/* Ignore non edited categories */
+				if (k == max) {
+					m++;
+					l++;
+				} else
+					l--;
+			}
+		}
+		if (strcmp(strcompare, argv[max]) == 0) {
+			needmod = 1;
+			for (j=3; j<max; l++, j++)
+				;	/* Ignore adding tags */
+		}
+		memset(line, 0, sizeof line);
+	}
+}
+
+/* Duplicate checking */
+int checkdup(char src_a[][BUFFER], char *src_b, int a_limit)
+{
+	for (int i=0; i<a_limit; i++) {
+		if (strcmp(src_a[i], src_b) == 0)
+			return i;
+	}
+	return 0;
 }
 
 /* Add tags */
@@ -237,7 +331,7 @@ void addtags(int argc, char *argv[])
 
 	/* File reading variables */
 	char flines[B_BUFFER][BUFFER];
-	int i = 0, j, k, total_tags = 0;
+	int i = 0, j, k, l;
 	char line[B_BUFFER];
 
 	int mode = CATEGORY;
@@ -246,166 +340,109 @@ void addtags(int argc, char *argv[])
 	char linetags[B_BUFFER][BUFFER];
 
 	/* Duplicate checking */
-	int duplicate = 0;
+	int dup = 0;
 	int validcategory = 0;
+	int maxtags;
 
 	char reject[B_BUFFER][BUFFER];
 	int t=0, dubcheck=0;
 	char strtoformat2[B_BUFFER];
 	char strtoformat3[B_BUFFER];
-	char strtocat[B_BUFFER];
-	int linechanged = 0;
-
-	/* Tags updating */
-	struct oldnewtag {
-		int old;
-		int new;
-	} numtags[B_BUFFER];
-	int l=0, m=0, si=0;
-	int needmod = 0;	/* If it need modification */
+	int strdiff;
 
 	/* Numbers modification */
 	char linenums[B_BUFFER][BUFFER];
-	char numstrold[S_BUFFER];
 	char numstrnew[S_BUFFER];
-	int changetonew = 0;
+
+	/* Number change */
+	int min, addby;
+	addby = min = -1;
+	int tagnum;
 
 	if (argc <= 4) {
-		printf("Error: You must state at least one tag and a category\n");
+		printf("Error: You must state at least one tag and a"
+				" category\n");
 		return;
 	}
-	if (!(checkifexist("tags"))) {
+	if (!(checkifexist(FILETARGET))) {
 		printf("Error: You need to create a \"tags\" file first\n");
 		return;
 	}
 
-	fp = fopen("tags", "r");
-	while (fgets(line, B_BUFFER, fp) != NULL) {
-		if (strcmp(line, "\n") == 0)
-			break;
-		/* mode == CATEGORY */
-		tilldd_strcpy(strcompare, line);
-		total_tags = afterddff_strcpytomulti(linetags, line, 0);
-		if (needmod == 1)
-			for (j=0; j<total_tags; m++, l++, j++, si++) {
-				for (k=3; k<argc-1; k++)
-					if (strcmp(argv[k], linetags[j]) == 0)
-						break;
-				if (k == argc-1) {	/* Not a duplicate */
-					numtags[si].old = m;
-					numtags[si].new = l;
-				} else
-					l--;
-			}
-		else
-			for (j=0; j<total_tags; j++) {
-				for (k=3; k<argc-1; k++) {
-					if (strcmp(argv[k], linetags[j]) == 0)
-						break;
-				}	/* Ignore non edited categories */
-				if (k == argc-1) {
-					m++;
-					l++;
-				} else
-					l--;
-			}
-		if (strcmp(strcompare, argv[argc-1]) == 0) {
-			needmod = 1;
-			for (j=3; j<argc-1; l++, j++)
-				;	/* Ignore adding tags */
-		}
-		memset(line, 0, sizeof line);
-	}
+	getchange(&min, &addby, argc-1, argv);
 
-	fp = fopen("tags", "r");
+	fp = fopen(FILETARGET, "r");
 	while (fgets(line, B_BUFFER, fp) != NULL) {
 		/* newline changes to file mode */
-		if (strcmp(line,"\n") == 0)
+		maxtags = 0;
+		if (strcmp(line,"\n") == 0) {
 			mode = FILES;
-		else if (mode == CATEGORY) {
+		} else if (mode == CATEGORY) {
 			tilldd_strcpy(strcompare, line);
-			/* accept if category not there */
-			total_tags = afterddff_strcpytomulti(linetags, line, 0);
-			if (strcmp(strcompare, argv[argc-1]) == 0)  {
-				validcategory = 1;
-				strcpy_wonl(strtoformat, line);
-				/* Gets tags (after the double dots) */
-				/* Skips duplicate checking if 0 */
-				if (total_tags == 0) {
-					for (j=3; j<argc-1; j++) 
-						strcat_as(strtoformat, argv[j]);
-				} else {
-					for (j=3; j<argc-1; j++) {
-						/* Duplicate checking */
-						for (k=0; k<total_tags; k++) {
-							if (strcmp(linetags[k], argv[j]) == 0) {
-								printf("Duplicate \"%s\" won't be put in\n", linetags[k]);
-								duplicate = 1;
-								break;
-							}
-						}
-						if (duplicate == 0)
-							strcat_as(strtoformat, argv[j]);
-						duplicate = 0;
-					}
+			maxtags = afterddff_strcpytomulti(linetags, line, 0);
+		}
+		strdiff = strcmp(strcompare, argv[argc-1]);
+		if (mode == CATEGORY && strdiff == 0) {
+			validcategory = 1;
+			strcpy_wonl(strtoformat, line);
+			for (j=3; j<argc-1; j++, dup=0) {
+				if (maxtags > 0) {
+					dup = checkdup(linetags, argv[j], 
+							maxtags);
 				}
-				dubcheck = i;
-				strcat(strtoformat, "\n");
-				strcpy(flines[i++], strtoformat);
-				memset(line, 0, sizeof line);
-				continue;
-			} else {
-				/* Skips duplicate checking if 0 */
-				if (total_tags > 0) {
-					for (j=3; j<argc-1; j++) {
-						/* Duplicate checking */
-						for (k=0; k<total_tags; k++) {
-							if (strcmp(linetags[k], argv[j]) == 0) {
-								printf("Duplicate \"%s\" won't be put in\n", linetags[k]);
-								duplicate = 1;
-								break;
-							}
-						}
-						if (duplicate == 1)
-							strcpy(reject[t++], argv[j]);
-						duplicate = 0;
-					}
+				if (dup == 0 || maxtags == 0)
+					strcat_as(strtoformat, argv[j]);
+				else if (dup > 0) {
+					printf("Duplicate \"%s\" won't be put"
+							" in\n", 
+							linetags[dup]);
+				}
+			}
+			dubcheck = i;
+			strcat(strtoformat, "\n");
+			strcpy(flines[i++], strtoformat);
+			memset(line, 0, sizeof line);
+			continue;
+		} else if (mode == CATEGORY && strdiff != 0) {
+			for (j=3; j<argc-1; j++, dup=0) {
+				dup = checkdup(linetags, argv[j], maxtags);
+				if (dup > 0) {
+					strcpy(reject[t++], argv[j]);
+					printf("Duplicate \"%s\" won't be put"
+							" in\n", 
+							linetags[dup]);
 				}
 			}
 		} else if (mode == FILES) {
-			// WORK ON
-			total_tags = afterddff_strcpytomulti(linenums, line, 1);
+			maxtags = afterddff_strcpytomulti(linenums, line, 1);
+			if (maxtags == 0 || min == -1)
+				goto skip_to_end_addtags;
 			l = 0;
-			if (total_tags > 0) {
-				fnol_strcpy(strtoformat2, line);
-				for (k=0; k<total_tags; k++) {
-					changetonew = 0;
-					for (j=0; j<si; j++) {
-						sprintf(numstrold, "%d", numtags[j].old);
-						if (strcmp(linenums[k], numstrold) == 0) {
-							sprintf(numstrnew, "%d ", numtags[j].new);
-							changetonew = 1;
-							l++;
-							break;
-						}
-					}
-					if (changetonew == 0)
-						sprintf(numstrnew, "%s ", linenums[k]);
-					strcat(strtoformat2, numstrnew);
-				}
-				if (l == 0) {	/* If no change needed */
-					rmdubspaces(strtoformat3, line);
-					strcpy(flines[i++], strtoformat3);
-				} else {
-					strcat(strtoformat2, "\n");
-					rmdubspaces(strtoformat3, strtoformat2);
-					strcpy(flines[i++], strtoformat3);
-				}
-				memset(strtoformat2, 0, sizeof strtoformat2);
-				memset(line, 0, sizeof line);
-				continue;
+			getfname(strtoformat2, line);
+			strcat(strtoformat2, " ");
+			for (k=0; k<maxtags; k++) {
+				tagnum = atoi(linenums[k]);
+				if (tagnum >= min) {
+					l++;
+					sprintf(numstrnew, " %d", 
+							tagnum+addby);
+				} else
+					sprintf(numstrnew, " %s", linenums[k]);
+				strcat(strtoformat2, numstrnew);
 			}
+			if (l == 0) {	/* If no change needed */
+				strcpy(flines[i++], line);
+			} else {
+				strcat(strtoformat2, "\n");
+				rmdubspaces(strtoformat3, strtoformat2);
+				strcpy(flines[i++], strtoformat3);
+				memset(strtoformat3, 0, sizeof strtoformat3);
+			}
+			memset(strtoformat2, 0, sizeof strtoformat2);
+			memset(line, 0, sizeof line);
+			continue;
 		}
+skip_to_end_addtags:
 		strcpy(flines[i++], line);
 		memset(line, 0, sizeof line);
 	}
@@ -416,28 +453,37 @@ void addtags(int argc, char *argv[])
 		return; 
 	}
 
-	/* Remove the rejects */
-	memset(strtoformat2, 0, sizeof strtoformat2);
-	tilldd_strcpy(strcompare, flines[dubcheck]);
-	strcat(strcompare, ":");
-	strcpy(strtoformat2, strcompare);
-	for (j=0; j<t; j++) {
-		total_tags = afterddff_strcpytomulti(linetags, strtoformat, 0);
-		for (k=0; k<total_tags; k++) {
-			if (strcmp(linetags[k], reject[j]) != 0) {
-				strcpy(strtocat, " ");
-				strcat(strtocat, linetags[k]);
-				strcat(strtoformat2, strtocat);
-			} else
+	rm_rejects(flines[dubcheck], t, strtoformat, reject);
+	writefile(flines, i);
+}
+
+/* Remove the rejects */
+// CHECK src and src_b
+void rm_rejects(char *src, int limit, char *src_b, char reject[][BUFFER])
+{
+	char strtoformat[B_BUFFER], strtocat[B_BUFFER];
+	char linetags[B_BUFFER][BUFFER];
+	int linechanged = 0;
+	int maxtags, j;
+
+	tilldd_strcpy(strtoformat, src);
+	strcat(strtoformat, ":");
+	for (int i=0; i<limit; i++) {
+		maxtags = afterddff_strcpytomulti(linetags, src_b, 0);
+		for (j=0; j<maxtags; j++) {
+			if (strcmp(linetags[j], reject[i]) == 0) {
 				linechanged = 1;
+				break;
+			}
+			strcpy(strtocat, " ");
+			strcat(strtocat, linetags[j]);
+			strcat(strtoformat, strtocat);
 		}
 	}
-
 	if (linechanged == 1) {
-		strcat(strtoformat2, "\n");
-		strcpy(flines[dubcheck], strtoformat2);
+		strcat(strtoformat, "\n");
+		strcpy(src, strtoformat);
 	}
-	writefile("tags", flines, i);
 }
 
 /* Remove extra white-spaces */
@@ -470,26 +516,19 @@ int afterddff_strcpytomulti(char dest[][BUFFER], char *src, int mode)
 			return 0;	/* There will be no tags so early 0 */
 		src++;
 	}
-	if (mode == 0 || ignoretill == '"')
+	if (ignoretill == ':' || ignoretill == '"')
 		src++;
+	src++;
 	for (int j=0; (dest[i][j] = *src) != '\0'; j++, *src++) {
 		if (*src == ' ' || *src == '\n') {
 			dest[i][j] = '\0';
 			i++;	/* value reset */
-			j = -1;
 			if (*src == '\n')
 				break;
+			j = -1;
 		}
 	}
 	return i;	/* Number of tags */
-}
-
-void multistrcat(char dest[][BUFFER], char src[][BUFFER], int start, int end)
-{
-	int j = 0;
-	printf("multistrcat: i: %d k: %d\n", start, end);	// TEST
-	while (start < end)
-		strcpy(dest[start++], src[j++]);
 }
 
 /* Concatenate string plus space */
@@ -513,15 +552,15 @@ void strcpy_wonl(char *dest, char *src)
 }
 
 /* Check if the file exists */
-int checkifexist(char *file)
+int checkifexist(char *filename)
 {
 	FILE *fp;
 
-	if ((fp = fopen(file, "r")) != NULL) {
+	if ((fp = fopen(filename, "r")) != NULL) {
 		fclose(fp);
 		return 1;
-	} else
-		return 0;
+	}
+	return 0;
 }
 
 /* Add category */
@@ -531,14 +570,13 @@ void addcategory(int argc, char *argv[])
 
 	/* File reading variables */
 	char flines[B_BUFFER][BUFFER];
-	int i = 0, j, k = 0, m;
+	int i = 0, j, k = 0;
 	char line[B_BUFFER];
 
-	char newcategory[B_BUFFER];
-
 	/* Duplication checking variables */
-	int skipdupverif = 0;
-	int duplicate[BUFFER];
+	int mode = CATEGORY;
+	char dups[S_BUFFER][BUFFER];
+	char str_j[S_BUFFER];
 	char strcompare[B_BUFFER];
 	int skip = 0;
 
@@ -546,52 +584,44 @@ void addcategory(int argc, char *argv[])
 		printf("Error: You must state the category\n");
 		return;		/* Terminates if no category stated */
 	}
-	if (!(checkifexist("tags"))) {
+	if (!(checkifexist(FILETARGET))) {
 		printf("Error: You need to create a \"tags\" file first\n");
 		return;
 	}
-	fp = fopen("tags", "r");
+	fp = fopen(FILETARGET, "r");
 	/* Reading each line */
 	while (fgets(line, B_BUFFER, fp) != NULL) {
 		if (strcmp("\n", line) == 0) {
-			/* Adding new categories */
 			for (j=3; j<argc; j++) {
-				/* Checking for duplicates */
-				for (m=0; m<k; m++) 	
-					if (duplicate[m] == j)  {
-						skip = 1;
-						printf("Duplicate: \"%s\""
-							" won't be added in\n",
-							argv[j]);
-						break;
-					}
-				/* Non-duplicate/Accepted */
+				sprintf(str_j, "%d", j);
+				skip = checkdup(dups, str_j, k);
+				/* Adding new category */
 				if (skip == 0) {
-					strcpy(newcategory, argv[j]);
-					strcat(newcategory, ":\n");
-					strcpy(flines[i++], newcategory);
+					strcpy(flines[i], argv[j]);
+					strcat(flines[i++], ":\n");
 					printf("New Category: %s\n", argv[j]);
+				} else {
+					printf("Duplicate: \"%s\" won't be"
+							" added in\n",
+							argv[j]);
 				}
 				skip = 0;
 			}
-			strcpy(flines[i++], "\n");
-			skipdupverif = 1;
-		} else {	/* Copying over per line */
-			if (skipdupverif == 0) {	/* Categories lines */
-				tilldd_strcpy(strcompare, line);
-				for (j=3; j<argc; j++) {
-					if (strcmp(strcompare, argv[j]) == 0) {
-						duplicate[k++] = j;
-						break;
-					}
+			mode = FILES;
+		} else if (mode == CATEGORY) {
+			tilldd_strcpy(strcompare, line);
+			for (j=3; j<argc; j++) {
+				if (strcmp(strcompare, argv[j]) == 0) {
+					sprintf(dups[k++], "%d", j);
+					break;
 				}
 			}
-			strcpy(flines[i++], line);	/* All lines */
 		}
+		strcpy(flines[i++], line);
 		memset(line, 0, sizeof line);
-	}	
+	}
 	fclose(fp);
-	writefile("tags", flines, i);
+	writefile(flines, i);
 }
 
 void tilldd_strcpy(char *dest, char *src)
@@ -628,18 +658,18 @@ void addtagstofile(int argc, char *argv[])
 	char newline[B_BUFFER];
 	char newlinefixed[B_BUFFER];
 	char str_num[S_BUFFER];
-	int strchanged = 0;
 
 	/* Duplication checking variables */
 	char linetags[B_BUFFER][BUFFER];
-	int ltagstotal = 0;
-	int *linetagsnums;
+	int ltagsmax = 0;
+	int *ltagsnums;
+	int strdiff;
 
 	if (argc <= 3) {
 		printf("Error: You must state at least one filename\n");
 		return;
 	}
-	if (!(checkifexist("tags"))) {
+	if (!(checkifexist(FILETARGET))) {
 		printf("Error: You need to create a \"tags\" file first\n");
 		return;
 	}
@@ -658,7 +688,7 @@ void addtagstofile(int argc, char *argv[])
 	g++;
 
 	/* Get and exclude tags in file as well as assign to number */
-	tags_amount = gettags_wfilter(tagsnums, tagstoadd, "tags", g);
+	tags_amount = gettags_wfilt(tagsnums, tagstoadd, g);
 	if (tags_amount == -1) {		/* Read error */
 		printf("Error: Fail reading file\n");
 		return;
@@ -668,59 +698,58 @@ void addtagstofile(int argc, char *argv[])
 		return;
 	}
 
-	fp = fopen("tags", "r");
+	fp = fopen(FILETARGET, "r");
 	while (fgets(line, B_BUFFER, fp) != NULL) {
-		if (strcmp(line, "\n") == 0) 
+		if (strcmp(line, "\n") == 0) {
 			mode = FILES;
-		else if (mode == FILES) {
-			strchanged = 0;
-			fnol_strcpy(filenameofline, line);
-			for (j=3; j<argc; j++) {
-				if (strcmp(argv[j], filenameofline) == 0) {
-					printf("FOUND: \"%s\"\n", filenameofline);	// PRINT
-					strcpy_wonl(newline, line);
-					linetagsnums = intcpy(tagsnums, tags_amount);
-					ltagstotal = afterddff_strcpytomulti(linetags, line, 1);
-					/* Duplication checking */
-					if (ltagstotal > 0) {
-						for (k=0; k<tags_amount; k++)
-							for (l=0; l<ltagstotal; l++) {
-								sprintf(str_num, "%d", linetagsnums[k]);
-								if (strcmp(str_num, linetags[l]) == 0)
-									linetagsnums[k] = -1;
-							}
-						for (k=0; k<tags_amount; k++) {
-							if (linetagsnums[k] != -1) {
-								sprintf(str_num, " %d", linetagsnums[k]);
-								strcat(newline, str_num);
-							}
-						}
+			goto skip_to_end_cat;
+		} else if (mode == CATEGORY) {
+			goto skip_to_end_cat;
+		}
+		getfname(filenameofline, line);
+		for (j=3; j<argc; j++) {
+			if (strcmp(argv[j], filenameofline) != 0)
+				continue;
+			printf("FOUND: \"%s\"\n", filenameofline);
+			ltagsnums = intcpy(tagsnums, tags_amount);
+			ltagsmax = afterddff_strcpytomulti(linetags, line, 1);
+			strcpy_wonl(newline, line);
+			for (k=0; k<tags_amount; k++) {
+				/* Duplication checking */
+				for (l=0; l<ltagsmax; l++) {
+					sprintf(str_num, "%d", ltagsnums[k]);
+					strdiff = strcmp(str_num, linetags[l]);
+					if (strdiff == 0) {
+						ltagsnums[k] = -1;
+						break;
 					}
-					strcat(newline, "\n");
-					// WORK ON
-					rmdubspaces(newlinefixed, newline);
-					strcpy(flines[i++], newlinefixed);
-					strchanged = 1;
-					memset(newline, 0, sizeof newline);
-					break;
+				}
+				if (ltagsnums[k] != -1) {
+					sprintf(str_num, " %d", ltagsnums[k]);
+					strcat(newline, str_num);
 				}
 			}
-			if (strchanged == 1)
-				continue;	/* Skips to next iteration of loop */
-		} 
+			strcat(newline, "\n");
+			rmdubspaces(newlinefixed, newline);
+			strcpy(flines[i++], newlinefixed);
+			memset(newline, 0, sizeof newline);
+			memset(newlinefixed, 0, sizeof newlinefixed);
+			goto skip_to_linereset_cat;
+		}
+skip_to_end_cat:
 		strcpy(flines[i++], line);
+skip_to_linereset_cat:
 		memset(line, 0, sizeof line);
 	}
 
 	fclose(fp);
-	writefile("tags", flines, i);
+	writefile(flines, i);
 }
 
-int gettags_wfilter(int numtags[BUFFER], char curtags[][BUFFER], char *filename, int ctagstotal)
+/* Assigns tags numbers and filters current tags */
+int gettags_wfilt(int numtags[BUFFER], char curtags[][BUFFER], int ctagstotal)
 {
 	FILE *fp;
-
-	/* File reading variables */
 	char line[B_BUFFER];
 
 	char linetags[B_BUFFER][BUFFER];	/* Tags compared to per line */
@@ -728,20 +757,22 @@ int gettags_wfilter(int numtags[BUFFER], char curtags[][BUFFER], char *filename,
 	int i, j, k=0, n=0;
 	int ltagstotal = 0;		/* Max item value of in-line tags */
 
-	if (!(checkifexist(filename))) 
+	if (!(checkifexist(FILETARGET))) 
 		return -1;		/* File reading error */
 
-	fp = fopen(filename, "r");
+	fp = fopen(FILETARGET, "r");
 	while (fgets(line, B_BUFFER, fp) != NULL) {
 		if (strcmp(line, "\n") == 0)
 			break;		/* End of tags reading */
 		ltagstotal = afterddff_strcpytomulti(linetags, line, 0);
-		for (j=0; j<ltagstotal; j++, n++) 
-			for (i=0; i<ctagstotal; i++) 
+		for (j=0; j<ltagstotal; j++, n++) { 
+			for (i=0; i<ctagstotal; i++) {
 				if (strcmp(curtags[i], linetags[j]) == 0) {
 					strcpy(allowedtags[k], curtags[i]);
 					numtags[k++] = n;
 				}
+			}
+		}
 		memset(line, 0, sizeof line);
 	}
 
@@ -756,7 +787,7 @@ int gettags_wfilter(int numtags[BUFFER], char curtags[][BUFFER], char *filename,
 }
 
 /* Gets the filename of its line */
-void fnol_strcpy(char *dest, char *src)
+void getfname(char *dest, char *src)
 {
 	int spacedname = 0;
 
@@ -795,20 +826,20 @@ void updatefile(void)
 	/* Sorting variables */
 	int out;
 
-	if (!(checkifexist("tags"))) {
+	if (!(checkifexist(FILETARGET))) {
 		printf("Error: You need to create a \"tags\" file first\n");
 		return;
 	}
 
-	fp = fopen("tags", "r");
+	fp = fopen(FILETARGET, "r");
 	newmax = dirtomstr("./", updatedls);
 	while (fgets(line, B_BUFFER, fp) != NULL) {
 		if (strcmp(line, "\n") == 0)
 			mode = FILES;
 		else if (mode == FILES) {
-			fnol_strcpy(oldls[j], line);
+			getfname(oldls[j], line);
 			if (hasspace(oldls[j])) {
-				strcpy_qm(qmoldls, oldls[j]);
+				sprintf(qmoldls, "\"%s\"", oldls[j]);
 				strcpy(oldls[j], qmoldls);
 			}
 			j++;
@@ -837,15 +868,15 @@ void updatefile(void)
 				" the categories and filenames)\n");
 		return;
 	}
-	writefile("tags", flines, max);
+	writefile(flines, max);
 }
 
 /* Write new modification to file */
-void writefile(char *filename, char flines[][BUFFER], int max)
+void writefile(char flines[][BUFFER], int max)
 {
 	FILE *fp;
 
-	fp = fopen("tags", "w");
+	fp = fopen(FILETARGET, "w");
 	for (int i = 0; i < max; i++)
 		fprintf(fp, "%s", flines[i]); 
 	fclose(fp);
@@ -858,38 +889,34 @@ void createfile(void)
 	FILE *fp;
 
 	/* Checking */
-	int choice, answer;
+	int ans;
 
 	/* sorting */
 	char ep_dname_ls[B_BUFFER][BUFFER];
 	int itr, upto;
 
 	/* Check if file exists */
-	if ((fp = fopen("tags", "r")) != NULL) {
+	if ((fp = fopen(FILETARGET, "r")) != NULL) {
 		fclose(fp);
-		fputs("File already exist, overwrite? [y/n] ", stdout);
-		choice = tolower(fgetc(stdin));
-		answer = choice;
-		/* Discard rest of input line */
-		while (choice != '\n')
-			choice = fgetc(stdin);
-		if (answer != 'y') 
+		printf("File already exist, overwrite? [y/n] ");
+		ans = tolower(getchar());
+		while (getchar() != '\n')
+			;	/* Discard rest of input line */
+		if (ans != 'y') 
 			return;		// Terminate file creation 
 		printf("Overwrite\n");
 	} 
 
-	fp = fopen("tags", "w+");	/* Make file "tags" */
 	itr = dirtomstr("./", ep_dname_ls);
-	if (itr == -1)
-		perror("Couldn't open current directory");
-	else {
-		upto = str_sort(ep_dname_ls, itr, 0);
-		/* Category placeholder */
-		fprintf(fp, "category: placeholder\n\n");
-		for (itr = 0; itr < upto; itr++) 
-			fprintf(fp, "%s\n", ep_dname_ls[itr]);
+	if (itr == -1) {
+		printf("Error: Couldn't open current directory\n");
+		return;
 	}
-	
+	upto = str_sort(ep_dname_ls, itr, 0);
+	fp = fopen(FILETARGET, "w+");		/* Make file "tags" */
+	fprintf(fp, "category: placeholder\n\n");
+	for (itr = 0; itr < upto; itr++) 
+		fprintf(fp, "%s\n", ep_dname_ls[itr]);
 	fclose(fp);
 }
 
@@ -901,19 +928,17 @@ int dirtomstr(char *dirname, char dest[][BUFFER])
 	int itr = 0;
 
 	dp = opendir(dirname);
-	if (dp != NULL) {
-		while ((ep = readdir(dp)) != NULL) {
-			if (hasspace(ep->d_name))
-				strcpy_qm(dest[itr++], ep->d_name);
-			else if (ep->d_name[0] != '.' && 
-					strcmp(ep->d_name, "tags") != 0)
-				strcpy(dest[itr++], ep->d_name);
-				/* file not . or itself */
-		}
-		(void) closedir(dp);
-		return itr;
-	} else
+	if (dp == NULL)
 		return -1;
+	while ((ep = readdir(dp)) != NULL) {
+		if (hasspace(ep->d_name))
+			sprintf(dest[itr++], "\"%s\"", ep->d_name);
+		else if (ep->d_name[0] != '.' && /* File not . or itself */
+				strcmp(ep->d_name, FILETARGET) != 0)
+			strcpy(dest[itr++], ep->d_name);
+	}
+	(void) closedir(dp);
+	return itr;
 }
 
 int str_sort(char string[][BUFFER], int size, int type)
@@ -944,16 +969,6 @@ int str_sort(char string[][BUFFER], int size, int type)
 				strcpy(lowerstr[j+1], temp);
 			}
 	return size;
-}
-
-/* Used if the filename has space, puts in quotation marks */
-void strcpy_qm(char *dest, char *src)
-{
-	*dest++ = '"';
-	while ((*dest++ = *src++) != '\0')
-		;
-	*--dest = '"';
-	*++dest = '\0';
 }
 
 void multi_strtolower(char string[][BUFFER], int size)

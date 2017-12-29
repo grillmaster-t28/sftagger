@@ -3,7 +3,7 @@
 NAME = sftagger
 SRC = sftagger.c
 CC = cc
-VERSION = 1.0-RC2
+VERSION = 1.0-RC3
 PREFIX = /usr/local
 CFLAGS = -std=c99 -pedantic -Wall -Os
 

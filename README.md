@@ -1,7 +1,7 @@
 # sftagger
 A simple file tagging tool written in C
 
-Current Version: 2017/12/28 (1.0 RC2)
+Current Version: 2017/12/29 (1.0 RC3)
 
 ## Installation
 Enter the following command to build and install sftagger (if necessary as root):
@@ -47,6 +47,10 @@ Replace `foo` with your searches (can be more than one keyword(s)) and `sxiv` wi
 
 ## Changelog
 ### 1.0
+#### 2017/12/29 (1.0 RC3)
+* Bug fix: Numbers not +3 of what they should be
+* Incompatible with RC2
+* Source code: Fewer indents and obey 80 columns rule
 #### 2017/12/28 (1.0 RC2)
 * Bug fix: Tag adding: Numbers not being updated
 * Bug fix: Tag adding: Duplication not checked outside of its category
