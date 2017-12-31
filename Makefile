@@ -17,7 +17,7 @@ clean:
 dist: clean
 	@echo creating dist tarball
 	@mkdir -p ${NAME}-${VERSION}
-	@cp -R LICENSE Makefile README.md ${NAME}.c ${NAME}-${VERSION}
+	@cp -R LICENSE Makefile README ${NAME}.c ${NAME}-${VERSION}
 	@tar -cf - "${NAME}-${VERSION}" | \
 		gzip -c > "${NAME}-${VERSION}.tar.gz"
 	@rm -rf "${NAME}-${VERSION}"
