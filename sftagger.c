@@ -15,7 +15,7 @@
 #define BUFFER 256
 #define B_BUFFER 1280
 
-#define VERSION "PRE-RELEASE 2017/12/29 (1.0 RC3)"
+#define VERSION "1.0 Release - 2017/12/31"
 #define FILETARGET "tags"
 
 enum {
@@ -218,6 +218,10 @@ void searchtags(int argc, char *argv[])
 		strcpy(ftagsnames[i], argv[i+2]);
 	/* Get and exclude tags in file as well as assign to number */
 	maxtags = gettags_wfilt(ftagsnums, ftagsnames, argc-2);
+	if (maxtags == 0) {
+		printf("Error: No valid tag given\n");
+		return;
+	}
 
 	fp = fopen(FILETARGET, "r");
 	while (fgets(line, B_BUFFER, fp) != NULL) {

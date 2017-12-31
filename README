@@ -1,0 +1,95 @@
+sftagger - simple file tagging tool
+===================================
+sftagger is a simple file tagging tool written in C
+
+Current Version: 2017/12/31 (1.0 Release)
+
+Installation
+------------
+Enter the following command to build and install sftagger 
+(if necessary as root):
+
+    $ make clean install
+
+Usage
+-----
+- create - Creates/overwrites the tags file
+- update - Updates the tags file
+- add category - Make new category/categories
+- add tags - Make new tags append to a category
+    - EX: "add tags small big size" - "small big" are the tags, "size" are the 
+          category
+- add tags-to - Appends tags to the files given
+    - EX: "add tags-to *.png" - "*.png" are all the files with ".png" extension
+- list categories - Lists categories
+- list tags-of - Lists tags of the category given
+    - EX: "list tags-of size" - "size" are the category
+- list all - Lists all categories and tags
+- read - outputs entire file of tags
+- version - outputs the current version
+- help - outputs the usage commands
+
+Using search
+------------
+Use xargs to make use of the outputs to the program you want to use it with
+
+    $ sftagger search foo | xargs -o sxiv
+
+Replace "foo" with your searches (can be more than one keyword(s)) and "sxiv"
+with your program of choice
+
+Dependencies
+------------
+- libc (recommend: C99 and POSIX >= 200809)
+
+Tested on
+---------
+- Linux
+    - Debian Unstable GNU/Linux using GCC - 2017/12/31
+
+TODO (For future releases)
+--------------------------
+- Output the category of the tag given
+- Renaming tags and categories
+- Removing tags categories and tags from each file
+- File overwrite, without overriding the categories/tags
+- Remove lines of unfounded files (As a separate command: $ sftagger remove 
+  leftover)
+- Inherited subcategories (Not sure how it will be implemented yet)
+- Optional: Include files inside a child directory upon file creation/update
+
+Changelog
+---------
+- 1.0
+    - 2017/12/31 (1.0 Release)
+        - Bug fix: Searching: Prevented when 0 valid tags given from searching
+	- README changed from md to text format
+    - 2017/12/29 (1.0 RC3)
+        - Bug fix: Fixed numbers +3 of what they should be
+        - Incompatible with RC2
+        - Source code: Fewer indents and obey 80 columns rule
+    - 2017/12/28 (1.0 RC2)
+        - Bug fix: Tag adding: Fixed numbers not being updated
+        - Bug fix: Tag adding: Fixed duplication not checked outside of its 
+	  category
+        - Added: ability to list out of all both categories and tags
+    - 2017/12/27 (1.0 RC1)
+        - Bug fix: Fixed line not fully cleared
+        - Added: ability to list out categories
+        - Added: ability to list out tags of its category
+        - Portability: Used fgets over getline
+        - Makefile now included
+        - More documented README
+- PRE-RELEASE
+    - 2017/12/26
+        - Added: files searching via tags
+        - Added: file updating (Only adds new, doesn't remove deleted/
+	  unfounded)
+    - 2017/12/25
+        - Added: tags adding to files and tags duplication checking
+    - 2017/12/24
+        - Added: new tags creation to a category and tags duplication checking
+    - 2017/12/23
+        - Added: new categories creation and categories duplication checking
+        - Added: "tags" file creation
+
