@@ -2,7 +2,11 @@ sftagger - simple file tagging tool
 ===================================
 sftagger is a simple file tagging tool written in C
 
-Current Version: 2017/12/31 (1.0 Release)
+Current Stable Version: 2017/12/31 (1.0 Release)
+Current Development Version: 2018/01/02 (2.0a-01)
+
+Always use the stable version over the development version as development 
+version are prone to breaking your "tags" file.
 
 Installation
 ------------
@@ -60,6 +64,12 @@ TODO (For future releases)
 
 Changelog
 ---------
+- 2.0
+    - 2018/01/01 (2.0a-01)
+        - Change the way "add tags-to" and "add categories" command works 
+	  (replaces create and update commands)
+	- Update command no longer available
+	- Create command legacy
 - 1.0
     - 2017/12/31 (1.0 Release)
         - Bug fix: Searching: Prevented when 0 valid tags given from searching
