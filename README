@@ -3,7 +3,7 @@ sftagger - simple file tagging tool
 sftagger is a simple file tagging tool written in C
 
 Current Stable Version: 2017/12/31 (1.0 Release)
-Current Development Version: 2018/01/02 (2.0a-01)
+Current Development Version: 2018/01/02 (2.0a-02)
 
 Always use the stable version over the development version as development 
 version are prone to breaking your "tags" file.
@@ -17,9 +17,8 @@ Enter the following command to build and install sftagger
 
 Usage
 -----
-- create - Creates/overwrites the tags file
-- update - Updates the tags file
-- add category - Make new category/categories
+- add category - Make new category/categories and creates a new tags file if it
+                 doesn't exists
 - add tags - Make new tags append to a category
     - EX: "add tags small big size" - "small big" are the tags, "size" are the 
           category
@@ -32,6 +31,12 @@ Usage
 - read - outputs entire file of tags
 - version - outputs the current version
 - help - outputs the usage commands
+
+Depreciated commands (by 2.0)
+-----------------------------
+- create - Creates/overwrites the tags file - REASON: add category does it, and
+           tags-to replaces it
+- update - Updates the tags file - REASON: No need as tags-to replaces it
 
 Using search
 ------------
@@ -49,27 +54,31 @@ Dependencies
 Tested on
 ---------
 - Linux
-    - Debian Unstable GNU/Linux using GCC - 2017/12/31
+    - Debian Unstable GNU/Linux using GCC and Clang - 2018/01/02
 
 TODO (For future releases)
 --------------------------
-- Output the category of the tag given
 - Renaming tags and categories
 - Removing tags categories and tags from each file
 - File overwrite, without overriding the categories/tags
 - Remove lines of unfounded files (As a separate command: $ sftagger remove 
   leftover)
 - Inherited subcategories (Not sure how it will be implemented yet)
-- Optional: Include files inside a child directory upon file creation/update
 
 Changelog
 ---------
 - 2.0
-    - 2018/01/01 (2.0a-01)
+    - 2018/01/02 (2.0a-02)
+        - Makefile: Reverted back to cc (GCC for GNU/Linux) rather than 
+	  specifically clang
+	- Bug fix: Tags adding: First tag/tag 0 properly checked upon 
+	  duplication
+    - 2018/01/02 (2.0a-01)
         - Change the way "add tags-to" and "add categories" command works 
 	  (replaces create and update commands)
 	- Update command no longer available
 	- Create command legacy
+	- No longer creates "category: placeholder" on top line
 - 1.0
     - 2017/12/31 (1.0 Release)
         - Bug fix: Searching: Prevented when 0 valid tags given from searching

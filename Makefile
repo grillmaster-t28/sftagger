@@ -2,8 +2,8 @@
 
 NAME = sftagger
 SRC = sftagger.c
-CC = clang
-VERSION = 1.0
+CC = cc
+VERSION = 2.0-a02
 PREFIX = /usr/local
 CFLAGS = -std=c99 -pedantic -Wall -Os
 
