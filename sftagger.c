@@ -15,7 +15,7 @@
 #define BUFFER 256
 #define B_BUFFER 1280
 
-#define VERSION "2.0-a03 - 2018/01/04"
+#define VERSION "2.0-a04 - 2018/01/04"
 #define FILETARGET "tags-dev"
 
 enum {
@@ -157,19 +157,52 @@ int str_sort(char string[][BUFFER], int size, int type)
 	return size;
 }
 
-int afterddff_strcpytomulti(char dest[][BUFFER], char *src, int mode)
+char determine_ignoretill(int mode, char firch)
 {
-	int i=0;
 	char ignoretill = ':';		/* Mode 0 */
 
 	/* Ignoring till colon */
 	if (mode == 1) {
-		if (*src == '"') {
+		if (firch == '"')
 			ignoretill = '"';
-			src++;
-		} else
+		else
 			ignoretill = ' ';
 	}
+	return ignoretill;
+}
+
+int afterddff_tagsamountout(char *src, int mode)
+{
+	int i=0;
+	char ignoretill = determine_ignoretill(mode, *src);
+	if (ignoretill == '"')
+		src++;
+
+	while (*src != ignoretill && *src != '\n') {
+		if (*src == '\n')
+			return 0;	/* There will be no tags so early 0 */
+		src++;
+	}
+	if (ignoretill == ':' || ignoretill == '"')
+		src++;
+	src++;
+	while (*src++ != '\0') {
+		if (*src == ' ' || *src == '\n') {
+			i++;
+			if (*src == '\n')
+				break;
+		}
+	}
+	return i;
+}
+
+int afterddff_strcpytomulti(char dest[][BUFFER], char *src, int mode)
+{
+	int i=0;
+	char ignoretill = determine_ignoretill(mode, *src);
+	if (ignoretill == '"')
+		src++;
+
 	while (*src != ignoretill && *src != '\n') {
 		if (*src == '\n')
 			return 0;	/* There will be no tags so early 0 */
@@ -353,9 +386,9 @@ int checkdup(char src_a[][BUFFER], char *src_b, int a_limit)
 {
 	for (int i=0; i<a_limit; i++) {
 		if (strcmp(src_a[i], src_b) == 0)
-			return 1;
+			return i;
 	}
-	return 0;
+	return -1;
 }
 
 /* Remove the rejects */
@@ -432,7 +465,7 @@ void addcategory(int argc, char *argv[])
 				sprintf(str_j, "%d", j);
 				skip = checkdup(dups, str_j, k);
 				/* Adding new category */
-				if (!skip) {
+				if (skip == -1) {
 					memcpy(flines[i], argv[j], 
 							sizeof(flines[i]));
 					strcat(flines[i++], ":\n");
@@ -441,7 +474,7 @@ void addcategory(int argc, char *argv[])
 					printf("Duplicate: \"%s\" won't be"
 							" added in\n",
 							argv[j]);
-					skip = 0;
+					skip = -1;
 				}
 			}
 			mode = FILES;
@@ -589,7 +622,6 @@ skip_to_linereset_cat:
 		strcat(newnumtags, strtagnum);
 	}
 	strcat(newnumtags, "\n");
-	printf("newnumtags: %s", newnumtags);
 
 	/* Putting in new files */
 	for (j=3; j<argc; j++) {
@@ -694,8 +726,8 @@ reset_line:
 	putchar('\n');
 }
 
-/* Add tags */
-void addtags(int argc, char *argv[])
+/* Add/Remove tags */
+void ar_tags(int argc, char *argv[], int type)
 {
 	FILE *fp;
 
@@ -727,7 +759,16 @@ void addtags(int argc, char *argv[])
 	/* Number change */
 	int min, addby;
 	addby = min = -1;
-	int tagnum;
+	int tagnum = -1;
+
+	/* Number remover */
+	int z=0, y=0, x;
+	int rm_nums[B_BUFFER];
+	int wontbeadded = 0;
+	char stradd[B_BUFFER];
+	int base = 0;
+	int rm_tagsnums[B_BUFFER];
+	int needrm;
 
 	if (argc <= 4) {
 		printf("Error: You must state at least one tag and a"
@@ -736,7 +777,10 @@ void addtags(int argc, char *argv[])
 	} else if (!(checkifexist(FILETARGET)))
 		return;
 
-	getchange(&min, &addby, argc-1, argv);
+	if (type == 0)
+		getchange(&min, &addby, argc-1, argv);
+	else if (type == 1)
+		addby = 0;
 
 	fp = fopen(FILETARGET, "r");
 	while (fgets(line, B_BUFFER, fp) != NULL) {
@@ -757,45 +801,100 @@ void addtags(int argc, char *argv[])
 					dup = checkdup(linetags, argv[j], 
 							maxtags);
 				}
-				if (!dup || maxtags == 0)
+				if ((dup == -1 || maxtags == 0) && type == 0)
 					strcat_as(strtoformat, argv[j]);
-				else if (dup) {
+				else if (dup >= 0 && type == 0) {
 					printf("Duplicate \"%s\" won't be put"
 							" in\n", argv[j]);
+				} else if (dup >= 0 && type == 1) {
+					printf("\"%s\" will be removed\n", 
+							argv[j]); 
+					rm_nums[z++] = dup;
+					rm_tagsnums[y++] = dup+base;
 				}
+			}
+			if (type == 1 && z > 0) {
+				memset(strtoformat, 0, sizeof strtoformat);
+				sprintf(strtoformat, "%s:", strcompare);
+				for (j=0; j<maxtags; j++) {	// WORK ON
+					for (k=0; k<z; k++) {
+						if (j == rm_nums[k]) {
+							wontbeadded = 1;
+							break;
+						}
+					}
+					if (wontbeadded == 0) {
+						sprintf(stradd, " %s", 
+								linetags[j]);
+						strcat(strtoformat, stradd);
+					} else
+						wontbeadded = 0;
+
+				}
+				z = 0;
 			}
 			dubcheck = i;
 			strcat(strtoformat, "\n");
 			memcpy(flines[i], strtoformat, sizeof(flines[i]));
 			i++;
 			memset(line, 0, sizeof line);
+			base += maxtags;
 			continue;
 		} else if (mode == CATEGORY && strdiff != 0) {
 			for (j=3; j<argc-1; j++, dup=0) {
 				dup = checkdup(linetags, argv[j], maxtags);
-				if (dup) {
+				if (dup >= 0) {
 					memcpy(reject[t], argv[j], 
 							sizeof(reject[t]));
 					t++;
-					printf("Duplicate \"%s\" won't be put"
-							" in\n", argv[j]);
+					if (type == 0) {
+						printf("Duplicate \"%s\" won't"
+								" be put in\n",
+								argv[j]);
+					}
 				}
 			}
-		} else if (mode == FILES) {
+			base += maxtags;
+		} else if (mode == FILES) {	// WORK ON (FOR REMOVE TYPE)
 			maxtags = afterddff_strcpytomulti(linenums, line, 1);
-			if (maxtags == 0 || min == -1)
+			if (type == 0 && (maxtags == 0 || min == -1))
 				goto skip_to_end_addtags;
 			l = 0;
+			wontbeadded = 0;
+			addby = 0;
 			getfname(strtoformat2, line);
 			strcat(strtoformat2, " ");
 			for (k=0; k<maxtags; k++) {
 				tagnum = atoi(linenums[k]);
-				if (tagnum >= min) {
+				needrm = 0;
+				for (x=0; x<y && type == 1; x++) {
+					if (tagnum > rm_tagsnums[x])
+						addby = -(x+1);
+					else if (tagnum == rm_tagsnums[x]) {
+						needrm = 1;
+						break;
+					}
+				}
+				if (tagnum >= min && type == 0) {
 					l++;
 					sprintf(numstrnew, " %d", 
 							tagnum+addby);
-				} else
-					sprintf(numstrnew, " %s", linenums[k]);
+				} else if (type == 0 || 
+						(!needrm && type == 1)) {
+					if (tagnum < rm_tagsnums[0] || 
+							type == 0) {
+						sprintf(numstrnew, " %d",
+								tagnum);
+					} else {
+						l++;
+						sprintf(numstrnew, " %d",
+								tagnum+addby);
+					}
+				} else if (type == 1) {
+					memcpy(numstrnew, "\0", 
+							sizeof numstrnew);
+					l++;
+				}
 				strcat(strtoformat2, numstrnew);
 			}
 			if (l == 0) {	/* If no change needed */
@@ -804,9 +903,12 @@ void addtags(int argc, char *argv[])
 			} else {
 				strcat(strtoformat2, "\n");
 				rmdubspaces(strtoformat3, strtoformat2);
-				memcpy(flines[i], strtoformat3, 
-						sizeof(flines[i]));
-				i++;
+				maxtags = afterddff_tagsamountout(strtoformat3, 1);	// WORK ON
+				if (maxtags > 0) {
+					memcpy(flines[i], strtoformat3, 
+							sizeof(flines[i]));
+					i++;
+				}
 				memset(strtoformat3, 0, sizeof strtoformat3);
 			}
 			memset(strtoformat2, 0, sizeof strtoformat2);
@@ -913,7 +1015,7 @@ void par2(int argc, char *argv[], int type)
 {
 	if (argc > 2) {
 		if ((strcmp(argv[2], "tags") == 0) && type == 0)
-			addtags(argc, argv);
+			ar_tags(argc, argv, 0);
 		else if ((strcmp(argv[2], "category") == 0) && type == 0)
 			addcategory(argc, argv);
 		else if ((strcmp(argv[2], "tags-to") == 0) && type == 0)
@@ -922,17 +1024,31 @@ void par2(int argc, char *argv[], int type)
 			rename_tc(argc, argv, "tag");
 		else if ((strcmp(argv[2], "category") == 0) && type == 1)
 			rename_tc(argc, argv, "category");
+		else if ((strcmp(argv[2], "tags") == 0) && type == 2)
+			ar_tags(argc, argv, 1);
+		/*
+		else if ((strcmp(argv[2], "category") == 0) && type == 2)
+			removecategory(argc, argv);
+		else if ((strcmp(argv[2], "from-tags") == 0) && type == 2)
+			removefromtags(argc, argv);
+		*/
 		else if (type == 0) {
 			printf("Error: You must give: {tags | category |"
 					" tags-to}\n");
 		} else if (type == 1)
 			printf("Error: You must give: {tag | category}\n");
+		else if (type == 2)
+			printf("Error: You must give: {tags | category |"
+					" from-tags}\n");
 	} else if (type == 0) {
 		printf("Error: You must give at least one parameter: {tags"
 				" | category | tags-to}\n");
 	} else if (type == 1) {
 		printf("Error: You must give at least one parameter: {tag |"
 				" category}\n");
+	} else if (type == 2) {
+		printf("Error: You must give at least one parameter: {tags"
+				" | category | from-tags}\n");
 	}
 }
 
@@ -941,9 +1057,9 @@ void readfile(void)
 	FILE *fp;
 	char line[B_BUFFER];
 
-	fp = fopen(FILETARGET, "r");
-	if (fp == NULL) {
-		printf("File \"tags\" doesn't exit in current directory\n");
+	if ((fp = fopen(FILETARGET, "r")) == NULL) {
+		printf("File \"%s\" doesn't exit in current directory\n", 
+				FILETARGET);
 		return;
 	}
 	while (fgets(line, B_BUFFER, fp) != NULL) {
@@ -979,6 +1095,8 @@ int main(int argc, char *argv[])
 			createfile();
 		else if (strcmp(argv[1], "rename") == 0)
 			par2(argc, argv, 1);
+		else if (strcmp(argv[1], "remove") == 0)
+			par2(argc, argv, 2);
 		else
 			usage();
 	} else
