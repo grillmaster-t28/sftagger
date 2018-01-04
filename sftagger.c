@@ -15,14 +15,13 @@
 #define BUFFER 256
 #define B_BUFFER 1280
 
-#define VERSION "2.0a-02 - 2018/01/02"
+#define VERSION "2.0-a03 - 2018/01/04"
 #define FILETARGET "tags-dev"
 
 enum {
-	CATEGORY,
-	FILES,
-	FALSE = 0,
-	TRUE
+	CATEGORY, FILES,
+	FALSE = 0, TRUE,
+	CAT_NAME = 0, TAG_NAME
 };
 
 void multi_strtolower(char string[][BUFFER], int size)
@@ -86,6 +85,7 @@ int checkifexist(char *filename)
 		fclose(fp);
 		return 1;
 	}
+	printf("Error: You need to create a \"tags\" file first\n");
 	return 0;
 }
 
@@ -508,11 +508,8 @@ void addtagstofile(int argc, char *argv[])
 	if (argc <= 3) {
 		printf("Error: You must state at least one filename\n");
 		return;
-	}
-	if (!(checkifexist(FILETARGET))) {
-		printf("Error: You need to create a \"tags\" file first\n");
+	} else if (!(checkifexist(FILETARGET)))
 		return;
-	}
 
 	printf("Add tags you want to insert, split them by space, "
 			"enter when done:\n");
@@ -642,11 +639,8 @@ void searchtags(int argc, char *argv[])
 	if (argc <= 2) {
 		printf("Error: You must state at least one tag\n");
 		return;
-	}
-	if (!(checkifexist(FILETARGET))) {
-		printf("Error: You need to create a \"tags\" file first\n");
+	} else if (!(checkifexist(FILETARGET)))
 		return;
-	}
 
 	for (i=0; i<argc-2; i++)
 		memcpy(ftagsnames[i], argv[i+2], sizeof(ftagsnames[i]));
@@ -739,11 +733,8 @@ void addtags(int argc, char *argv[])
 		printf("Error: You must state at least one tag and a"
 				" category\n");
 		return;
-	}
-	if (!(checkifexist(FILETARGET))) {
-		printf("Error: You need to create a \"tags\" file first\n");
+	} else if (!(checkifexist(FILETARGET)))
 		return;
-	}
 
 	getchange(&min, &addby, argc-1, argv);
 
@@ -837,21 +828,111 @@ skip_to_end_addtags:
 	writefile(flines, i);
 }
 
-void add(int argc, char *argv[])
+char *afterdd_strreturn(char *src)
+{
+	int i=0;
+	char *dest = malloc(B_BUFFER);
+	while (*src++ != ':')
+		;
+	src++;
+	while ((dest[i++] = *src++) != '\0')
+		;
+	dest[--i] = '\0';
+	return dest;
+}
+
+void rename_tc(int argc, char *argv[], char *str_rntype)
+{
+	FILE *fp;
+
+	char flines[B_BUFFER][BUFFER];
+	char line[B_BUFFER];
+
+	int type = CATEGORY;
+	char strcompare[B_BUFFER];
+	int renamed = 0;
+	int i = 0, ltagsmax = 0, j;
+	int rntype = !(strcmp(str_rntype, "category")) ? CAT_NAME : TAG_NAME;
+	char linetags[B_BUFFER][BUFFER];
+	char temptag[B_BUFFER];
+
+	if (argc != 5) {
+		printf("Error: You must state only one replacement name and"
+				" only one current %s name\n", str_rntype);
+		return;
+	} else if (!(checkifexist(FILETARGET)))
+		return;
+	
+	fp = fopen(FILETARGET, "r");
+	while (fgets(line, B_BUFFER, fp) != NULL) {
+		if (strcmp(line, "\n") == 0)
+			type = FILES;
+		else if (type == CATEGORY)
+			tilldd_strcpy(strcompare, line);
+		if (type == CATEGORY && rntype == TAG_NAME)
+			ltagsmax = afterddff_strcpytomulti(linetags, line, 0);
+		if (type == CATEGORY && renamed == 0 && 
+				rntype == CAT_NAME && 
+				strcmp(strcompare, argv[4]) == 0) {
+			printf("FOUND: \"%s\", replacement: \"%s\"\n", argv[4],
+					argv[3]);
+			sprintf(flines[i], "%s: %s", argv[3], 
+					afterdd_strreturn(line));
+			i++;
+			renamed = 1;
+			continue;
+		} else if (type == CATEGORY && renamed == 0 &&
+				rntype == TAG_NAME &&
+				ltagsmax > 0) {
+			sprintf(flines[i], "%s:", strcompare);
+			for (j=0; j<ltagsmax; j++) {
+				if (strcmp(linetags[j], argv[4]) == 0) {
+					printf("FOUND: \"%s\", replacement:"
+							" \"%s\"\n", argv[4], 
+							argv[3]);
+					sprintf(linetags[j], " %s", argv[3]);
+					renamed = 1;
+				} else {
+					memcpy(temptag, linetags[j], 
+							sizeof temptag);
+					sprintf(linetags[j], " %s", temptag);
+				}
+				strcat(flines[i], linetags[j]);
+			}
+			strcat(flines[i], "\n");
+			i++;
+			continue;
+		}
+		memcpy(flines[i], line, sizeof flines[i]);
+		i++;
+	}
+	writefile(flines, i);
+}
+
+void par2(int argc, char *argv[], int type)
 {
 	if (argc > 2) {
-		if (strcmp(argv[2], "tags") == 0)
+		if ((strcmp(argv[2], "tags") == 0) && type == 0)
 			addtags(argc, argv);
-		else if (strcmp(argv[2], "category") == 0)
+		else if ((strcmp(argv[2], "category") == 0) && type == 0)
 			addcategory(argc, argv);
-		else if (strcmp(argv[2], "tags-to") == 0)
+		else if ((strcmp(argv[2], "tags-to") == 0) && type == 0)
 			addtagstofile(argc, argv);
-		else
+		else if ((strcmp(argv[2], "tag") == 0) && type == 1)
+			rename_tc(argc, argv, "tag");
+		else if ((strcmp(argv[2], "category") == 0) && type == 1)
+			rename_tc(argc, argv, "category");
+		else if (type == 0) {
 			printf("Error: You must give: {tags | category |"
 					" tags-to}\n");
-	} else {
+		} else if (type == 1)
+			printf("Error: You must give: {tag | category}\n");
+	} else if (type == 0) {
 		printf("Error: You must give at least one parameter: {tags"
 				" | category | tags-to}\n");
+	} else if (type == 1) {
+		printf("Error: You must give at least one parameter: {tag |"
+				" category}\n");
 	}
 }
 
@@ -874,8 +955,9 @@ void readfile(void)
 
 void usage(void)
 {
-	printf("usage: {create | read | version | help | search | "
-			"add {category | tags | tags-to} | categories}\n");
+	printf("usage: {create | read | version | help | search | categories |"
+			" add {category | tags | tags-to} |"
+			" rename {category | tag}}\n");
 }
 
 int main(int argc, char *argv[])
@@ -888,18 +970,19 @@ int main(int argc, char *argv[])
 		else if (strcmp(argv[1], "help") == 0)
 			usage();
 		else if (strcmp(argv[1], "add") == 0)
-			add(argc, argv);
+			par2(argc, argv, 0);
 		else if (strcmp(argv[1], "search") == 0)
 			searchtags(argc, argv);
 		else if (strcmp(argv[1], "categories") == 0)
 			listcattags();
 		else if (strcmp(argv[1], "create") == 0)
 			createfile();
+		else if (strcmp(argv[1], "rename") == 0)
+			par2(argc, argv, 1);
 		else
 			usage();
-	} else {
+	} else
 		usage();
-	}
 	return 0;
 }
 
