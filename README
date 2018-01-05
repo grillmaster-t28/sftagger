@@ -3,7 +3,7 @@ sftagger - simple file tagging tool
 sftagger is a simple file tagging tool written in C
 
 Current Stable Version: 2017/12/31 (1.0 Release)
-Current Development Version: 2018/01/05 (2.0a-05)
+Current Development Version: 2018/01/06 (2.0 RC1)
 
 Always use the stable version over the development version as development 
 version are prone to breaking your "tags" file.
@@ -23,15 +23,26 @@ Usage
     - EX: "add tags small big size" - "small big" are the tags, "size" are the 
           category
 - add tags-to - Appends tags to the files given
-    - EX: "add tags-to *.png" - "*.png" are all the files with ".png" extension
-- list categories - Lists categories
-- list tags-of - Lists tags of the category given
-    - EX: "list tags-of size" - "size" are the category
-- list all - Lists all categories and tags
+    - EX: "add tags-to *.png"
+      - Prompt: "arts plain" - adds the tags "arts" and "plain" to the files 
+                               that has ".png" in the suffix
+- categories - Lists all categories and tags
 - rename category - Rename the category specified
     - EX: "rename category bar foo" - replaces category "foo" with "bar"
 - rename tag - Rename the tag specified
     - EX: "rename tag bar foo" - replaces tag "foo" with "bar"
+- remove category - Removes the category specified (only one allowed and a 
+                    warning follows after the command entered)
+    - EX: "remove category bread_type" - removes category "bread_type"
+- remove tags - Removes the tags specified
+    - EX: "remove tags white brown" - removes tags "white" and "brown"
+- remove from-tags - Removes the tags from the files specified
+    - EX: "remove from-tags bread_01.jpg bread_02.jpg"
+      - Prompt: "bread" - removes the tag "bread" from the files "bread_01.jpg"
+                          and "bread_02.jpg"
+- remove files - Removes the files from the list
+    - EX: "remove files not_bread_01.jpg not_bread_02.png" - removes the files
+                  "not_bread_01.jpg" and "not_bread_02.png" from the list
 - read - outputs entire file of tags
 - version - outputs the current version
 - help - outputs the usage commands
@@ -41,6 +52,7 @@ Depreciated commands (by 2.0)
 - create - Creates/overwrites the tags file - REASON: add category does it, and
            tags-to replaces it
 - update - Updates the tags file - REASON: No need as tags-to replaces it
+- list - Replaced by categories
 
 Using search
 ------------
@@ -70,6 +82,10 @@ TODO (For future releases)
 Changelog
 ---------
 - 2.0
+    - 2018/01/06 (2.0 RC1)
+        - New feature: File's tag and file removing
+	- Bug fix: Tags adding: Spaced filenames added properly
+	- New man page included
     - 2018/01/05 (2.0a-05)
         - New feature: Category removing
     - 2018/01/04 (2.0a-04)

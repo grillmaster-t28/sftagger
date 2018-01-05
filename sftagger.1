@@ -1,0 +1,118 @@
+.TH SFTAGGER 1 sftagger-VERSION
+.SH NAME
+sftagger \- simple file tagging tool
+.SH SYNOPSIS
+.B sftagger
+{create | read | version | help | search | categories | add {category | tags | 
+tags-to} | rename {category | tag} | remove {category | tags | from-tags | 
+files}}
+.SH DESCRIPTION
+.B sftagger
+is a simple file tagging tool written in C. It allows assigning multiple tags 
+to each files/directories, categorising tags, and searching for files based on
+the tags assigned per files.
+.SH OPTIONS
+.TP
+.B create
+Creates the file that'll contain the tags database
+.TP
+.B read
+Outputs the entire file that contains the tags database
+.TP
+.B version
+Outputs the version of the program
+.TP
+.B help
+Outputs the usage/synopsis
+.TP
+.B search
+Outputs the result of the search
+.TP
+.B categories
+Outputs the categories and its tags
+.TP
+.B add 
+Allows to add category, tags, and appends tags per files
+.RS
+.TP
+.B category
+Adds category/categories to the database
+.TP
+.B tags
+Adds tags to the category in the database
+.TP
+.B tags-to
+Adds tags (specified after entering command) to each files specified
+.RE
+.TP
+.B rename
+Allows to rename category, and tags
+.RS
+.TP
+.B category
+Rename the category specified
+.TP
+.B tag
+Rename the tag specified
+.RE
+.TP
+.B remove
+Allows to remove category, tags, tags per files, and files
+.RS
+.TP
+.B category
+Removes the category specified, warning follows after the command entered
+.TP
+.B tags
+Removes the tags specified
+.TP
+.B from-tags
+Removes the tags (specified after entering command) from the files specified
+.TP
+.B files
+Removes the files specified
+.RE
+.SH EXAMPLES
+.TP
+.B sftagger search foo | xargs -o sxiv
+Use 
+.BR xargs (1)
+to make use of the outputs to the program you want to use it with
+
+Replace "foo" with your searches (can be more than one keyword(s)) and "sxiv"
+with your program of choice
+.TP
+.B add category gender race
+this will add "gender" and "race" as categories
+
+The category command can also be used to create the database file
+.TP
+.B add tags small big size
+"small" and "big" are the tags, "size" are the category
+.TP
+.B add tags-to *.png
+PROMT: arts plain
+
+adds the tags "arts" and "plain" to the files that has ".png" in the suffix
+.TP
+.B rename category bar foo
+replaces category "foo" with "bar"
+.TP
+.B rename tag bar foo
+replaces tag "foo" with "bar"
+.TP
+.B remove category bread_type
+removes category "bread_type"
+.TP
+.B remove tags white brown
+removes tags "white" and "brown"
+.TP
+.B remove from-tags bread_01.jpg bread_02.jpg
+PROMPT: bread
+
+removes the tag "bread" from the files "bread_01.jpg" and "bread_02.jpg"
+.TP
+.B remove files not_bread_01.jpg not_bread_02.png
+removes the files "not_bread_01.jpg" and "not_bread_02.png" from the list
+.SH SEE ALSO
+.BR xargs (1)
