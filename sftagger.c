@@ -15,7 +15,7 @@
 #define BUFFER 256
 #define B_BUFFER 1280
 
-#define VERSION "2.0-a04 - 2018/01/04"
+#define VERSION "2.0-a05 - 2018/01/05"
 #define FILETARGET "tags-dev"
 
 enum {
@@ -747,7 +747,7 @@ void ar_tags(int argc, char *argv[], int type)
 	int maxtags;
 
 	char reject[B_BUFFER][BUFFER];
-	int t=0, dubcheck=0;
+	int t=0, dubcheck = -1;
 	char strtoformat2[B_BUFFER];
 	char strtoformat3[B_BUFFER];
 	int strdiff;
@@ -770,16 +770,39 @@ void ar_tags(int argc, char *argv[], int type)
 	int rm_tagsnums[B_BUFFER];
 	int needrm;
 
-	if (argc <= 4) {
+	/* Category remover */
+	char rmtags[B_BUFFER][BUFFER];
+	int rmmax;
+
+	if (argc <= 4 && type != 2) {
 		printf("Error: You must state at least one tag and a"
 				" category\n");
+		return;
+	} else if (argc != 4 && type == 2) {
+		printf("Error: You must state one category\n");
 		return;
 	} else if (!(checkifexist(FILETARGET)))
 		return;
 
+	if (type == 2) {	/* Set warning for remove category command */
+		printf("CAUTION: You're going to remove the category:"
+				" \"%s\".\n"
+				"This will remove ALL tags within the category"
+				" which will also remove the numerical"
+				" assignment for ALL those tags also!\n"
+				"\nDo you like to continue? Y/N [N]: ",
+				argv[4]);
+		int c = getchar();
+		int ans = c;
+		while (c != '\n')
+			c = getchar();
+		if (ans != 'Y')
+			return;
+	}
+
 	if (type == 0)
 		getchange(&min, &addby, argc-1, argv);
-	else if (type == 1)
+	else if (type >= 1)
 		addby = 0;
 
 	fp = fopen(FILETARGET, "r");
@@ -796,7 +819,20 @@ void ar_tags(int argc, char *argv[], int type)
 		if (mode == CATEGORY && strdiff == 0) {
 			validcategory = 1;
 			strcpy_wonl(strtoformat, line);
-			for (j=3; j<argc-1; j++, dup=0) {
+			if (type == 2) {
+				// WORK ON
+				multi_strcpy(rmtags, linetags, maxtags);
+				rmmax = maxtags;
+				for (j=0; j<rmmax; j++) {
+					dup = checkdup(linetags, rmtags[j], 
+							maxtags);
+					rm_tagsnums[y++] = dup+base;
+				}
+				memset(line, 0, sizeof line);
+				base += maxtags;
+				continue;
+			}
+			for (j=3; j<argc-1 && type != 2; j++, dup=0) {
 				if (maxtags > 0) {
 					dup = checkdup(linetags, argv[j], 
 							maxtags);
@@ -816,7 +852,7 @@ void ar_tags(int argc, char *argv[], int type)
 			if (type == 1 && z > 0) {
 				memset(strtoformat, 0, sizeof strtoformat);
 				sprintf(strtoformat, "%s:", strcompare);
-				for (j=0; j<maxtags; j++) {	// WORK ON
+				for (j=0; j<maxtags; j++) {
 					for (k=0; k<z; k++) {
 						if (j == rm_nums[k]) {
 							wontbeadded = 1;
@@ -855,7 +891,7 @@ void ar_tags(int argc, char *argv[], int type)
 				}
 			}
 			base += maxtags;
-		} else if (mode == FILES) {	// WORK ON (FOR REMOVE TYPE)
+		} else if (mode == FILES) {
 			maxtags = afterddff_strcpytomulti(linenums, line, 1);
 			if (type == 0 && (maxtags == 0 || min == -1))
 				goto skip_to_end_addtags;
@@ -867,7 +903,7 @@ void ar_tags(int argc, char *argv[], int type)
 			for (k=0; k<maxtags; k++) {
 				tagnum = atoi(linenums[k]);
 				needrm = 0;
-				for (x=0; x<y && type == 1; x++) {
+				for (x=0; x<y && type >= 1; x++) {
 					if (tagnum > rm_tagsnums[x])
 						addby = -(x+1);
 					else if (tagnum == rm_tagsnums[x]) {
@@ -880,7 +916,7 @@ void ar_tags(int argc, char *argv[], int type)
 					sprintf(numstrnew, " %d", 
 							tagnum+addby);
 				} else if (type == 0 || 
-						(!needrm && type == 1)) {
+						(!needrm && type >= 1)) {
 					if (tagnum < rm_tagsnums[0] || 
 							type == 0) {
 						sprintf(numstrnew, " %d",
@@ -890,7 +926,7 @@ void ar_tags(int argc, char *argv[], int type)
 						sprintf(numstrnew, " %d",
 								tagnum+addby);
 					}
-				} else if (type == 1) {
+				} else if (type >= 1) {
 					memcpy(numstrnew, "\0", 
 							sizeof numstrnew);
 					l++;
@@ -903,7 +939,8 @@ void ar_tags(int argc, char *argv[], int type)
 			} else {
 				strcat(strtoformat2, "\n");
 				rmdubspaces(strtoformat3, strtoformat2);
-				maxtags = afterddff_tagsamountout(strtoformat3, 1);	// WORK ON
+				maxtags = afterddff_tagsamountout(strtoformat3,
+						1);
 				if (maxtags > 0) {
 					memcpy(flines[i], strtoformat3, 
 							sizeof(flines[i]));
@@ -926,7 +963,8 @@ skip_to_end_addtags:
 		return; 
 	}
 
-	rm_rejects(flines[dubcheck], t, reject);
+	if (type != 2 && dubcheck != -1)
+		rm_rejects(flines[dubcheck], t, reject);
 	writefile(flines, i);
 }
 
@@ -1026,9 +1064,9 @@ void par2(int argc, char *argv[], int type)
 			rename_tc(argc, argv, "category");
 		else if ((strcmp(argv[2], "tags") == 0) && type == 2)
 			ar_tags(argc, argv, 1);
-		/*
 		else if ((strcmp(argv[2], "category") == 0) && type == 2)
-			removecategory(argc, argv);
+			ar_tags(argc, argv, 2);
+		/*
 		else if ((strcmp(argv[2], "from-tags") == 0) && type == 2)
 			removefromtags(argc, argv);
 		*/
@@ -1073,7 +1111,8 @@ void usage(void)
 {
 	printf("usage: {create | read | version | help | search | categories |"
 			" add {category | tags | tags-to} |"
-			" rename {category | tag}}\n");
+			" rename {category | tag} |"
+			" remove {category | tags}}\n");
 }
 
 int main(int argc, char *argv[])
