@@ -3,9 +3,10 @@
 NAME = sftagger
 SRC = sftagger.c
 CC = cc
-VERSION = 2.0-RC1
+VERSION = 2.0-RC2
 PREFIX = /usr/local
-MANPREFIX = ${PREFIX}/share/man
+# OpenBSD: You may want to take out "/share" or else it may not install the man page properly
+MANPREFIX = ${PREFIX}/share/man	
 CFLAGS = -std=c99 -pedantic -Wall -Os
 
 ${NAME}: ${NAME}.c
