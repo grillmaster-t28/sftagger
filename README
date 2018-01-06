@@ -83,6 +83,8 @@ Changelog
 ---------
 - 2.0
     - 2018/01/06 (2.0 RC2)
+        - RC2-1: Fixed Makefile and category to remove not showing up in the 
+	  warning message
         - Source code: Changed all sprintf to snprintf, strcat to strncat, and 
 	  strcpy to memcpy to comply with OpenBSD warnings.
 	- Tag adding more verbose

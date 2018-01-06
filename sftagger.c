@@ -887,7 +887,7 @@ void ar_tags(int argc, char *argv[], int type)
 				" which will also remove the numerical"
 				" assignment for ALL those tags also!\n"
 				"\nDo you like to continue? Y/N [N]: ",
-				argv[4]);
+				argv[3]);
 		int c = getchar();
 		int ans = c;
 		while (c != '\n')

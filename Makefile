@@ -6,7 +6,7 @@ CC = cc
 VERSION = 2.0-RC2
 PREFIX = /usr/local
 # OpenBSD: You may want to take out "/share" or else it may not install the man page properly
-MANPREFIX = ${PREFIX}/share/man	
+MANPREFIX = ${PREFIX}/share/man
 CFLAGS = -std=c99 -pedantic -Wall -Os
 
 ${NAME}: ${NAME}.c
