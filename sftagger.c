@@ -15,14 +15,38 @@
 #define BUFFER 256
 #define B_BUFFER 1280
 
-#define VERSION "2.0 RC2 - 2018/01/06"
-#define FILETARGET "tags"
+#define VERSION "2.0 RC3 - 2018/01/09"
+#define FILETARGET "tags-dev"
 
 enum {
 	CATEGORY, FILES,
 	FALSE = 0, TRUE,
-	CAT_NAME = 0, TAG_NAME
+	CAT_NAME = 0, TAG_NAME,
+	ADD = 0, RENAME, REMOVE
 };
+
+static const char *usage_error[] = {
+	"{category | tags | tags-to}",
+	"{category | tag}",
+	"{category | tags | from-tags | files}"
+};
+
+int specialchar(char c)
+{
+	if ((c > 31 && c < 48) || (c > 58 && c < 65) || (c > 90 && c < 97) ||
+			(c > 122))
+		return 1;
+	return 0;
+}
+
+/* Adds in backslash if it's a special character */
+void enspecch(char *dest, char *src)
+{
+	do {
+		if (specialchar(*src))
+			*dest++ = '\\';
+	} while ((*dest++ = *src++) != '\0');
+}
 
 void multi_strtolower(char string[][BUFFER], int size)
 {
@@ -159,31 +183,22 @@ int str_sort(char string[][BUFFER], int size, int type)
 
 char determine_ignoretill(int mode, char firch)
 {
-	char ignoretill = ':';		/* Mode 0 */
-
-	/* Ignoring till colon */
-	if (mode == 1) {
-		if (firch == '"')
-			ignoretill = '"';
-		else
-			ignoretill = ' ';
-	}
-	return ignoretill;
+	if (mode == 1)
+		return ' ';
+	return ':';
 }
 
 int afterddff_tagsamountout(char *src, int mode)
 {
 	int i=0;
 	char ignoretill = determine_ignoretill(mode, *src);
-	if (ignoretill == '"')
-		src++;
 
 	while (*src != ignoretill && *src != '\n') {
 		if (*src == '\n')
 			return 0;	/* There will be no tags so early 0 */
 		src++;
 	}
-	if (ignoretill == ':' || ignoretill == '"')
+	if (ignoretill == ':')
 		src++;
 	src++;
 	while (*src++ != '\0') {
@@ -200,15 +215,13 @@ int afterddff_strcpytomulti(char dest[][BUFFER], char *src, int mode)
 {
 	int i=0;
 	char ignoretill = determine_ignoretill(mode, *src);
-	if (ignoretill == '"')
-		src++;
 
 	while (*src != ignoretill && *src != '\n') {
 		if (*src == '\n')
 			return 0;	/* There will be no tags so early 0 */
 		src++;
 	}
-	if (ignoretill == ':' || ignoretill == '"')
+	if (ignoretill == ':')
 		src++;
 	src++;
 	for (int j=0; (dest[i][j] = *src) != '\0'; j++, src++) {
@@ -267,16 +280,16 @@ int gettags_wfilt(int numtags[BUFFER], char curtags[][BUFFER], int ctagstotal)
 /* Gets the filename of its line */
 void getfname(char *dest, char *src)
 {
-	int spacedname = 0;
+	int spec_ch = 0;
 
-	while ((*dest = *src++) != '\n') {
-		if (*dest == '"')
-			spacedname = !spacedname;
-		else if (spacedname == 0 && *dest == ' ')
+	do {
+		if (!spec_ch && *src == '\\') {
+			spec_ch = 1;
+		} else if (spec_ch)
+			spec_ch = 0;
+		else if (!spec_ch && *src == ' ')
 			break;
-		else 
-			dest++;
-	}
+	} while ((*dest++ = *src++) != '\n');
 	*dest = '\0';
 }
 
@@ -293,14 +306,6 @@ int *intcpy(int *src, size_t len)
 	int *dest = malloc(len * sizeof(int));
 	memcpy(dest, src, len * sizeof(int));
 	return dest;
-}
-
-int hasspace(char *src)
-{
-	while (*src != '\0')
-		if (*src++ == ' ')
-			return 1;
-	return 0;
 }
 
 void tilldd_strcpy(char *dest, char *src)
@@ -538,6 +543,9 @@ void ar_tagsfiles(int argc, char *argv[], int type)
 	/* Tags sorting */
 	int out;
 
+	/* Arg-able string */
+	char argablestr[B_BUFFER];
+
 	if (argc <= 3) {
 		printf("Error: You must state at least one filename\n");
 		return;
@@ -576,6 +584,7 @@ void ar_tagsfiles(int argc, char *argv[], int type)
 
 	fp = fopen(FILETARGET, "r");
 	while (fgets(line, B_BUFFER, fp) != NULL) {
+		memset(argablestr, 0, sizeof argablestr);
 		if (strcmp(line, "\n") == 0) {
 			mode = FILES;
 			goto skip_to_end_cat;
@@ -584,9 +593,10 @@ void ar_tagsfiles(int argc, char *argv[], int type)
 		}
 		getfname(filenameofline, line);
 		for (j=3; j<argc; j++) {
-			if (strcmp(argv[j], filenameofline) != 0)
+			enspecch(argablestr, argv[j]);
+			if (strcmp(argablestr, filenameofline) != 0)
 				continue;
-			printf("FOUND: \"%s\"\n", filenameofline);
+			printf("FOUND: \"%s\"\n", argv[j]);
 			memcpy(filesfound[m], argv[j], sizeof filesfound[m]);
 			m++;
 			ltagsnums = intcpy(tagsnums, tags_amount);
@@ -614,8 +624,8 @@ void ar_tagsfiles(int argc, char *argv[], int type)
 				}
 			} else if (type == 1) {
 				snprintf(newline, strlen(filenameofline)+1, 
-						"%s:", filenameofline);
-				int todel = 0;
+						"%s ", filenameofline);
+				int todel = 0, delt = 0;
 				for (k=0; k<ltagsmax; k++) {
 					for (l=0; l<tags_amount; l++) {
 						snprintf(str_num, 11, "%d", 
@@ -624,6 +634,7 @@ void ar_tagsfiles(int argc, char *argv[], int type)
 								linetags[k]);
 						if (strdiff == 0) {
 							todel = 1;
+							delt++;
 							break;
 						}
 					}
@@ -634,6 +645,12 @@ void ar_tagsfiles(int argc, char *argv[], int type)
 							" %s", linetags[k]);
 					strncat(newline, str_num, 
 							strlen(str_num));
+				}
+				if (delt == ltagsmax) {
+					printf("File \"%s\" removed (has no"
+							" tags assigned to it)"
+							"\n", argv[j]);
+					goto skip_to_linereset_cat;
 				}
 			}
 			strncat(newline, "\n", 2);
@@ -671,17 +688,12 @@ skip_to_linereset_cat:
 			}
 		}
 		if (found == 0) {
-			if (hasspace(argv[j])) {
-				snprintf(flines[i++], strlen(argv[j])+
-						strlen(newnumtags)+3, 
-						"\"%s\"%s", 
-						argv[j], newnumtags);
-			} else {
-				snprintf(flines[i++], strlen(argv[j])+
-						strlen(newnumtags)+1, "%s%s", 
-						argv[j], newnumtags);
-			}
+			enspecch(argablestr, argv[j]);
+			snprintf(flines[i++], strlen(argablestr)+
+					strlen(newnumtags)+1, "%s%s", 
+					argablestr, newnumtags);
 			printf("New file added: \"%s\"\n", argv[j]);
+			memset(argablestr, 0, sizeof argablestr);
 		}
 	}
 
@@ -710,6 +722,7 @@ void removefiles(int argc, char *argv[])
 	
 	/* Checking variables */
 	char filename[B_BUFFER];
+	char argablestr[B_BUFFER];
 
 	if (argc <= 3) {
 		printf("Error: You must state at least one filename to"
@@ -727,7 +740,8 @@ void removefiles(int argc, char *argv[])
 			goto removefiles_lineadd;
 		getfname(filename, line);
 		for (j=3; j<argc; j++) {
-			if (strcmp(argv[j], filename) == 0) {
+			enspecch(argablestr, argv[j]);
+			if (strcmp(argablestr, filename) == 0) {
 				printf("Removing file: \"%s\"\n", filename);
 				goto removefiles_linereset;
 			}
@@ -813,12 +827,8 @@ reset_line:
 	}
 
 	/* Outputs out result of the search */
-	for (i=0; i<k; i++) {
-		if (hasspace(slines[i])) {
-			printf("\"%s\" ", slines[i]);
-		} else
-			printf("%s ", slines[i]);
-	}
+	for (i=0; i<k; i++)
+		printf("%s ", slines[i]);
 	putchar('\n');
 }
 
@@ -1165,42 +1175,30 @@ void rename_tc(int argc, char *argv[], char *str_rntype)
 void par2(int argc, char *argv[], int type)
 {
 	if (argc > 2) {
-		if ((strcmp(argv[2], "tags") == 0) && type == 0)
+		if (!strcmp(argv[2], "tags") && type == ADD)
 			ar_tags(argc, argv, 0);
-		else if ((strcmp(argv[2], "category") == 0) && type == 0)
+		else if (!strcmp(argv[2], "category") && type == ADD)
 			addcategory(argc, argv);
-		else if ((strcmp(argv[2], "tags-to") == 0) && type == 0)
+		else if (!strcmp(argv[2], "tags-to") && type == ADD)
 			ar_tagsfiles(argc, argv, 0);
-		else if ((strcmp(argv[2], "tag") == 0) && type == 1)
+		else if (!strcmp(argv[2], "tag") && type == RENAME)
 			rename_tc(argc, argv, "tag");
-		else if ((strcmp(argv[2], "category") == 0) && type == 1)
+		else if (!strcmp(argv[2], "category") && type == RENAME)
 			rename_tc(argc, argv, "category");
-		else if ((strcmp(argv[2], "tags") == 0) && type == 2)
+		else if (!strcmp(argv[2], "tags") && type == REMOVE)
 			ar_tags(argc, argv, 1);
-		else if ((strcmp(argv[2], "category") == 0) && type == 2)
+		else if (!strcmp(argv[2], "category") && type == REMOVE)
 			ar_tags(argc, argv, 2);
-		else if ((strcmp(argv[2], "from-tags") == 0) && type == 2)
+		else if (!strcmp(argv[2], "from-tags") && type == REMOVE)
 			ar_tagsfiles(argc, argv, 1);
-		else if ((strcmp(argv[2], "files") == 0) && type == 2)
+		else if (!strcmp(argv[2], "files") && type == REMOVE)
 			removefiles(argc, argv);
-		else if (type == 0) {
-			printf("Error: You must give: {tags | category |"
-					" tags-to}\n");
-		} else if (type == 1)
-			printf("Error: You must give: {tag | category}\n");
-		else if (type == 2)
-			printf("Error: You must give: {tags | category |"
-					" from-tags}\n");
-	} else if (type == 0) {
-		printf("Error: You must give at least one parameter: {tags"
-				" | category | tags-to}\n");
-	} else if (type == 1) {
-		printf("Error: You must give at least one parameter: {tag |"
-				" category}\n");
-	} else if (type == 2) {
-		printf("Error: You must give at least one parameter: {tags"
-				" | category | from-tags}\n");
-	}
+		else
+			printf("Error: You must give: %s\n",
+					usage_error[type]);
+	} else
+		printf("Error: You must give at least one parameter:"
+				" %s\n", usage_error[type]);
 }
 
 void readfile(void)
@@ -1223,32 +1221,32 @@ void readfile(void)
 void usage(void)
 {
 	printf("usage: {create | read | version | help | search | categories |"
-			" add {category | tags | tags-to} |"
-			" rename {category | tag} |"
-			" remove {category | tags | from-tags | files}}\n");
+			" add %s | rename %s | remove %s}\n",
+			usage_error[ADD], usage_error[RENAME],
+			usage_error[REMOVE]);
 }
 
 int main(int argc, char *argv[])
 {
 	if (argc > 1) {
-		if (strcmp(argv[1], "read") == 0)
+		if (!strcmp(argv[1], "read"))
 			readfile();
-		else if (strcmp(argv[1], "version") == 0)
+		else if (!strcmp(argv[1], "version"))
 			printf("%s\n", VERSION);
-		else if (strcmp(argv[1], "help") == 0)
+		else if (!strcmp(argv[1], "help"))
 			usage();
-		else if (strcmp(argv[1], "add") == 0)
-			par2(argc, argv, 0);
-		else if (strcmp(argv[1], "search") == 0)
+		else if (!strcmp(argv[1], "add"))
+			par2(argc, argv, ADD);
+		else if (!strcmp(argv[1], "search"))
 			searchtags(argc, argv);
-		else if (strcmp(argv[1], "categories") == 0)
+		else if (!strcmp(argv[1], "categories"))
 			listcattags();
-		else if (strcmp(argv[1], "create") == 0)
+		else if (!strcmp(argv[1], "create"))
 			createfile();
-		else if (strcmp(argv[1], "rename") == 0)
-			par2(argc, argv, 1);
-		else if (strcmp(argv[1], "remove") == 0)
-			par2(argc, argv, 2);
+		else if (!strcmp(argv[1], "rename"))
+			par2(argc, argv, RENAME);
+		else if (!strcmp(argv[1], "remove"))
+			par2(argc, argv, REMOVE);
 		else
 			usage();
 	} else
