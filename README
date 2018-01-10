@@ -2,8 +2,8 @@ sftagger - simple file tagging tool
 ===================================
 sftagger is a simple file tagging tool written in C
 
-Current Stable Version: 2017/12/31 (1.0 Release)
-Current Development Version: 2018/01/09 (2.0 RC3)
+Current Stable Version: 2018/01/10 (2.0 Release)
+Next Development Version: 2.1a-01 or 3.0a-01
 
 Always use the stable version over the development version as development 
 version are prone to breaking your "tags" file.
@@ -70,18 +70,31 @@ Dependencies
 Tested on
 ---------
 - Linux
-    - Debian Unstable GNU/Linux using GCC and Clang - 2018/01/06
+    - Debian Unstable GNU/Linux using GCC and Clang - 2018/01/09
 - BSD
     - OpenBSD 6.2 using Clang
 
 TODO (For future releases)
 --------------------------
-- Removing tags categories and tags from each file
+- More bug-fixes and preventions in place
 - Inherited subcategories (Not sure how it will be implemented yet)
 
 Changelog
 ---------
 - 2.0
+    - 2018/01/10 (2.0 Release)
+        - Dots, forward-slashes, dashes, and underscores exempt from as special
+	  characters
+	- Current directory's database tag-file exempt from being added
+	- File/tags-to message change: "New file added:" to "New file/directory
+	  added:"
+	- Bug fix: Tags properly added on rather than having part of the 
+	  filename
+	- Bug fix: Tags that needed to be removed are removed properly without 
+	  also removing other tags after it
+	- Bug fix: Renaming category: Empty category fixed to format properly
+	- Bug fix: Renaming tags: Prevented duplicated tags
+	- Incompatible with 1.0 and 2.0 RC3
     - 2018/01/09 (2.0 RC3)
         - Improvement: Filenames with special characters are dealt with 
 	  properly

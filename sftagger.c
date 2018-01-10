@@ -15,8 +15,8 @@
 #define BUFFER 256
 #define B_BUFFER 1280
 
-#define VERSION "2.0 RC3 - 2018/01/09"
-#define FILETARGET "tags-dev"
+#define VERSION "2.0 Release - 2018/01/10"
+#define FILETARGET "tags"
 
 enum {
 	CATEGORY, FILES,
@@ -33,8 +33,7 @@ static const char *usage_error[] = {
 
 int specialchar(char c)
 {
-	if ((c > 31 && c < 48) || (c > 58 && c < 65) || (c > 90 && c < 97) ||
-			(c > 122))
+	if (!(c >= '-' && c <= '/') && c != '_' && !isalnum(c) && !(c < 32))
 		return 1;
 	return 0;
 }
@@ -192,11 +191,12 @@ int afterddff_tagsamountout(char *src, int mode)
 {
 	int i=0;
 	char ignoretill = determine_ignoretill(mode, *src);
+	char prev = ' ';
 
-	while (*src != ignoretill && *src != '\n') {
+	while (*src != ignoretill || prev == '\\') {
 		if (*src == '\n')
 			return 0;	/* There will be no tags so early 0 */
-		src++;
+		prev = *src++;
 	}
 	if (ignoretill == ':')
 		src++;
@@ -215,11 +215,12 @@ int afterddff_strcpytomulti(char dest[][BUFFER], char *src, int mode)
 {
 	int i=0;
 	char ignoretill = determine_ignoretill(mode, *src);
+	char prev = ' ';
 
-	while (*src != ignoretill && *src != '\n') {
+	while (*src != ignoretill || prev == '\\') {
 		if (*src == '\n')
 			return 0;	/* There will be no tags so early 0 */
-		src++;
+		prev = *src++;
 	}
 	if (ignoretill == ':')
 		src++;
@@ -627,6 +628,7 @@ void ar_tagsfiles(int argc, char *argv[], int type)
 						"%s ", filenameofline);
 				int todel = 0, delt = 0;
 				for (k=0; k<ltagsmax; k++) {
+					todel = 0;
 					for (l=0; l<tags_amount; l++) {
 						snprintf(str_num, 11, "%d", 
 								ltagsnums[l]);
@@ -687,12 +689,12 @@ skip_to_linereset_cat:
 				break;
 			}
 		}
-		if (found == 0) {
+		if (found == 0 && strcmp(argv[j], FILETARGET)) {
 			enspecch(argablestr, argv[j]);
 			snprintf(flines[i++], strlen(argablestr)+
 					strlen(newnumtags)+1, "%s%s", 
 					argablestr, newnumtags);
-			printf("New file added: \"%s\"\n", argv[j]);
+			printf("New file/directory added: \"%s\"\n", argv[j]);
 			memset(argablestr, 0, sizeof argablestr);
 		}
 	}
@@ -1089,10 +1091,9 @@ char *afterdd_strreturn(char *src)
 	char *dest = malloc(B_BUFFER);
 	while (*src++ != ':')
 		;
-	src++;
-	while ((dest[i++] = *src++) != '\0')
+	while ((dest[i++] = *src++) != '\n')
 		;
-	dest[--i] = '\0';
+	dest[i] = '\0';
 	return dest;
 }
 
@@ -1111,6 +1112,7 @@ void rename_tc(int argc, char *argv[], char *str_rntype)
 	int rntype = !(strcmp(str_rntype, "category")) ? CAT_NAME : TAG_NAME;
 	char linetags[B_BUFFER][BUFFER];
 	char temptag[B_BUFFER];
+	int dup = 0;
 
 	if (argc != 5) {
 		printf("Error: You must state only one replacement name and"
@@ -1118,6 +1120,10 @@ void rename_tc(int argc, char *argv[], char *str_rntype)
 		return;
 	} else if (!(checkifexist(FILETARGET)))
 		return;
+	else if (!strcmp(argv[3], argv[4])) {
+		printf("Error: Replacement name the same as original name\n");
+		return;
+	}
 	
 	fp = fopen(FILETARGET, "r");
 	while (fgets(line, B_BUFFER, fp) != NULL) {
@@ -1127,25 +1133,27 @@ void rename_tc(int argc, char *argv[], char *str_rntype)
 			tilldd_strcpy(strcompare, line);
 		if (type == CATEGORY && rntype == TAG_NAME)
 			ltagsmax = afterddff_strcpytomulti(linetags, line, 0);
-		if (type == CATEGORY && renamed == 0 && 
+		if (type == CATEGORY && !renamed && 
 				rntype == CAT_NAME && 
 				strcmp(strcompare, argv[4]) == 0) {
 			printf("FOUND: \"%s\", replacement: \"%s\"\n", argv[4],
 					argv[3]);
 			char *afdline = afterdd_strreturn(line);
-			snprintf(flines[i], strlen(argv[3])+3+strlen(afdline),
-					"%s: %s", 
+			snprintf(flines[i], strlen(argv[3])+4+strlen(afdline),
+					"%s:%s", 
 					argv[3], afdline);
 			i++;
 			renamed = 1;
 			continue;
-		} else if (type == CATEGORY && renamed == 0 &&
+		} else if (type == CATEGORY && !renamed &&
 				rntype == TAG_NAME &&
 				ltagsmax > 0) {
 			snprintf(flines[i], strlen(strcompare)+2, "%s:", 
 					strcompare);
+			if (checkdup(linetags, argv[3], ltagsmax) != -1)
+				dup = 1;
 			for (j=0; j<ltagsmax; j++) {
-				if (strcmp(linetags[j], argv[4]) == 0) {
+				if (!strcmp(linetags[j], argv[4]) && !dup) {
 					printf("FOUND: \"%s\", replacement:"
 							" \"%s\"\n", argv[4], 
 							argv[3]);
@@ -1165,9 +1173,20 @@ void rename_tc(int argc, char *argv[], char *str_rntype)
 			}
 			strncat(flines[i++], "\n", 2);
 			continue;
+		} else if (type == CATEGORY && renamed &&
+				rntype == TAG_NAME &&
+				ltagsmax > 0) {
+			if (checkdup(linetags, argv[3], ltagsmax) != -1)
+				dup = 1;
 		}
 		memcpy(flines[i], line, sizeof flines[i]);
 		i++;
+	}
+	if (!renamed || dup) {
+		printf("Error: Failed to rename from \"%s\" to \"%s\" due to"
+				" attempt duplication or tag not found\n", 
+				argv[4], argv[3]);
+		return;
 	}
 	writefile(flines, i);
 }
