@@ -15,8 +15,8 @@
 #define BUFFER 256
 #define B_BUFFER 1280
 
-#define VERSION "2.0 Release - 2018/01/10"
-#define FILETARGET "tags"
+#define VERSION "2.1-RC1 - 2018/01/30"
+#define FILETARGET "tags-dev"
 
 enum {
 	CATEGORY, FILES,
@@ -39,12 +39,19 @@ int specialchar(char c)
 }
 
 /* Adds in backslash if it's a special character */
-void enspecch(char *dest, char *src)
+void enspecch(char *dest, char src[])
 {
 	do {
 		if (specialchar(*src))
 			*dest++ = '\\';
 	} while ((*dest++ = *src++) != '\0');
+}
+
+void strtolower(char *dest, char src[])
+{
+	while ((*dest++ = tolower(*src++)) != '\0')
+		;
+	*--dest = '\0';
 }
 
 void multi_strtolower(char string[][BUFFER], int size)
@@ -68,7 +75,7 @@ void multi_strclr(char string[][BUFFER], int size)
 }
 
 /* Remove extra white-spaces */
-void rmdubspaces(char *dest, char *src)
+void rmdubspaces(char *dest, char src[])
 {
 	char prev = ' ';
 	while (*src != '\0') {
@@ -80,7 +87,7 @@ void rmdubspaces(char *dest, char *src)
 }
 
 /* Concatenate string plus space */
-void strcat_as(char *dest, char *add)
+void strcat_as(char *dest, char add[])
 {
 	while (*dest++ != '\0')
 		;
@@ -92,7 +99,7 @@ void strcat_as(char *dest, char *add)
 }
 
 /* Copy string without newline */
-void strcpy_wonl(char *dest, char *src)
+void strcpy_wonl(char *dest, char src[])
 {
 	while ((*dest++ = *src++) != '\n')
 		;
@@ -100,7 +107,7 @@ void strcpy_wonl(char *dest, char *src)
 }
 
 /* Check if the file exists */
-int checkifexist(char *filename)
+int checkifexist(char filename[])
 {
 	FILE *fp;
 
@@ -147,11 +154,55 @@ int createfile(void)
 	return 0;
 }
 
+void strswap(char *str1, char *str2)
+{
+	char strT[BUFFER];
+	memcpy(strT, str1, strlen(str1)+1);
+	memcpy(str1, str2, strlen(str2)+1);
+	memcpy(str2, strT, strlen(strT)+1);
+	memset(strT, 0, sizeof strT);
+}
+
+/* Quicksorting strings */
+int partition(char str[][BUFFER], int low, int high) 
+{
+	char pivot[BUFFER];
+	char lwrstr1[BUFFER], lwrstr2[BUFFER];
+	strtolower(pivot, str[high]);
+	int i = low - 1;
+	for (int j = low; j <= high - 1; j++) {
+		strtolower(lwrstr1, str[j]);
+		if (strcmp(lwrstr1, pivot) < 0) {
+			i++;
+			strswap(str[i], str[j]);
+			printf("AFTER: %s %s\n", str[i], str[j]);
+		}
+		memset(lwrstr1, 0, sizeof lwrstr1);
+	}
+	strtolower(lwrstr1, str[high]);
+	strtolower(lwrstr2, str[i + 1]);
+	if (strcmp(lwrstr1, lwrstr2) < 0) {
+		strswap(str[i + 1], str[high]);
+		printf("A-AFTER: %s %s\n", str[i + 1], str[high]);
+	}
+	memset(lwrstr1, 0, sizeof lwrstr1);
+	memset(lwrstr2, 0, sizeof lwrstr2);
+	memset(pivot, 0, sizeof pivot);
+	return (i + 1);
+}
+
+void quicksort(char str[][BUFFER], int low, int high)
+{
+	if (low < high) {
+		int pivot = partition(str, low, high);
+		quicksort(str, low, pivot - 1);
+		quicksort(str, pivot + 1, high);
+	}
+}
+
 int str_sort(char string[][BUFFER], int size, int type)
 {
-	int i, j, min = 0;
-	char temp[BUFFER];
-	char lowerstr[B_BUFFER][BUFFER];
+	int i, min = 0;
 	if (type == 1) {		/* Has full file strings */
 		for (i=0; i<size; i++)
 			if (strcmp(string[i], "\n") == 0)
@@ -160,23 +211,7 @@ int str_sort(char string[][BUFFER], int size, int type)
 			return -1;	/* Error */
 		min = i;
 	}
-	multi_strcpy(lowerstr, string, size);
-	multi_strtolower(lowerstr, size);
-	/* Multi string sorting */
-	for (i=min; i<size; i++) 
-		for (j=min; j<size-1; j++) 
-			/* Swap */
-			if (strcmp(lowerstr[j], lowerstr[j+1]) > 0) {
-				memcpy(temp, string[j], sizeof temp);
-				memcpy(string[j], string[j+1], 
-						sizeof string[j]);
-				memcpy(string[j+1], temp, sizeof string[j+1]);
-				memcpy(temp, lowerstr[j], sizeof temp);
-				memcpy(lowerstr[j], lowerstr[j+1], 
-						sizeof lowerstr[j]);
-				memcpy(lowerstr[j+1], temp, 
-						sizeof lowerstr[j+1]);
-			}
+	quicksort(string, min, size);
 	return size;
 }
 
@@ -187,7 +222,7 @@ char determine_ignoretill(int mode, char firch)
 	return ':';
 }
 
-int afterddff_tagsamountout(char *src, int mode)
+int afterddff_tagsamountout(char src[], int mode)
 {
 	int i=0;
 	char ignoretill = determine_ignoretill(mode, *src);
@@ -211,7 +246,7 @@ int afterddff_tagsamountout(char *src, int mode)
 	return i;
 }
 
-int afterddff_strcpytomulti(char dest[][BUFFER], char *src, int mode)
+int afterddff_strcpytomulti(char dest[][BUFFER], char src[], int mode)
 {
 	int i=0;
 	char ignoretill = determine_ignoretill(mode, *src);
@@ -279,7 +314,7 @@ int gettags_wfilt(int numtags[BUFFER], char curtags[][BUFFER], int ctagstotal)
 }
 
 /* Gets the filename of its line */
-void getfname(char *dest, char *src)
+void getfname(char *dest, char src[])
 {
 	int spec_ch = 0;
 
@@ -309,7 +344,7 @@ int *intcpy(int *src, size_t len)
 	return dest;
 }
 
-void tilldd_strcpy(char *dest, char *src)
+void tilldd_strcpy(char *dest, char src[])
 {
 	while ((*dest++ = *src++) != ':')
 		;
@@ -388,7 +423,7 @@ void getchange(int *min, int *addby, int max, char *argv[])
 }
 
 /* Duplicate checking */
-int checkdup(char src_a[][BUFFER], char *src_b, int a_limit)
+int checkdup(char src_a[][BUFFER], char src_b[], int a_limit)
 {
 	for (int i=0; i<a_limit; i++) {
 		if (strcmp(src_a[i], src_b) == 0)
@@ -398,7 +433,7 @@ int checkdup(char src_a[][BUFFER], char *src_b, int a_limit)
 }
 
 /* Remove the rejects */
-void rm_rejects(char *src, int limit, char reject[][BUFFER])
+void rm_rejects(char src[], int limit, char reject[][BUFFER])
 {
 	char strtoformat[B_BUFFER], strtocat[B_BUFFER];
 	char linetags[B_BUFFER][BUFFER];
@@ -1085,7 +1120,7 @@ skip_to_end_addtags:
 }
 
 /* Returns string after colon */
-char *afterdd_strreturn(char *src)
+char *afterdd_strreturn(char src[])
 {
 	int i=0;
 	char *dest = malloc(B_BUFFER);
