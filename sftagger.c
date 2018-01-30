@@ -200,17 +200,14 @@ void quicksort(char str[][BUFFER], int low, int high)
 	}
 }
 
-int str_sort(char string[][BUFFER], int size, int type)
+int str_sort(char string[][BUFFER], int size)
 {
-	int i, min = 0;
-	if (type == 1) {		/* Has full file strings */
-		for (i=0; i<size; i++)
-			if (strcmp(string[i], "\n") == 0)
-				break;
-		if (i >= size-1)
-			return -1;	/* Error */
-		min = i;
-	}
+	int min;
+	for (min=0; min<size; min++)
+		if (strcmp(string[min], "\n") == 0)
+			break;
+	if (min >= size-1)
+		return -1;	/* Error */
 	quicksort(string, min, size);
 	return size;
 }
@@ -735,7 +732,7 @@ skip_to_linereset_cat:
 	}
 
 	/* Sorts the file strings */
-	out = str_sort(flines, i, 1);
+	out = str_sort(flines, i);
 	if (out == -1) {
 		printf("Error: Unable to sort (can't find a newline in between"
 				" the categories and filenames)\n");
