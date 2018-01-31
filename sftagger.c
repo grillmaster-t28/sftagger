@@ -15,7 +15,7 @@
 #define BUFFER 256
 #define B_BUFFER 1280
 
-#define VERSION "2.1-RC1 - 2018/01/30"
+#define VERSION "2.1-RC2 - 2018/01/31"
 #define FILETARGET "tags-dev"
 
 enum {
@@ -172,19 +172,13 @@ int partition(char str[][BUFFER], int low, int high)
 	int i = low - 1;
 	for (int j = low; j <= high - 1; j++) {
 		strtolower(lwrstr1, str[j]);
-		if (strcmp(lwrstr1, pivot) < 0) {
-			i++;
-			strswap(str[i], str[j]);
-			printf("AFTER: %s %s\n", str[i], str[j]);
-		}
+		if (strcmp(lwrstr1, pivot) < 0)
+			strswap(str[++i], str[j]);
 		memset(lwrstr1, 0, sizeof lwrstr1);
 	}
 	strtolower(lwrstr1, str[high]);
 	strtolower(lwrstr2, str[i + 1]);
-	if (strcmp(lwrstr1, lwrstr2) < 0) {
-		strswap(str[i + 1], str[high]);
-		printf("A-AFTER: %s %s\n", str[i + 1], str[high]);
-	}
+	strswap(str[i + 1], str[high]);
 	memset(lwrstr1, 0, sizeof lwrstr1);
 	memset(lwrstr2, 0, sizeof lwrstr2);
 	memset(pivot, 0, sizeof pivot);
@@ -208,7 +202,7 @@ int str_sort(char string[][BUFFER], int size)
 			break;
 	if (min >= size-1)
 		return -1;	/* Error */
-	quicksort(string, min, size);
+	quicksort(string, min+1, size-1);
 	return size;
 }
 
