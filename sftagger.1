@@ -29,7 +29,7 @@ Outputs the usage/synopsis
 Outputs the result of the search
 .TP
 .B categories
-Outputs the categories and its tags
+Outputs the categories and its tags as well as the amount of files has each tag
 .TP
 .B add 
 Allows to add category, tags, and appends tags per files
@@ -72,6 +72,13 @@ Removes the tags (specified after entering command) from the files specified
 .B files
 Removes the files specified
 .RE
+.TP
+.B all
+Outputs all files
+.TP
+.B show-tags
+Outputs the tags (and its category) of the filenames given, as well as amount
+of tags each file has
 .SH EXAMPLES
 .TP
 .B sftagger search foo | xargs -o sxiv
@@ -114,5 +121,9 @@ removes the tag "bread" from the files "bread_01.jpg" and "bread_02.jpg"
 .TP
 .B remove files not_bread_01.jpg not_bread_02.png
 removes the files "not_bread_01.jpg" and "not_bread_02.png" from the list
+.TP
+.B show-tags not_bread_01.jpg bread_01.jpg
+outputs the tags (and category per tag) for files "not_bread_01.jpg" and 
+"bread_01.jpg"
 .SH SEE ALSO
 .BR xargs (1)

@@ -15,7 +15,7 @@
 #define BUFFER 256
 #define B_BUFFER 1280
 
-#define VERSION "2.1-RC2 - 2018/01/31"
+#define VERSION "3.0a-01 - 2018/02/01"
 #define FILETARGET "tags-dev"
 
 enum {
@@ -310,10 +310,8 @@ void getfname(char *dest, char src[])
 	int spec_ch = 0;
 
 	do {
-		if (!spec_ch && *src == '\\') {
-			spec_ch = 1;
-		} else if (spec_ch)
-			spec_ch = 0;
+		if ((!spec_ch && *src == '\\') || spec_ch)
+			spec_ch = !spec_ch;
 		else if (!spec_ch && *src == ' ')
 			break;
 	} while ((*dest++ = *src++) != '\n');
@@ -346,19 +344,79 @@ void listcattags(void)
 {
 	FILE *fp;
 	char line[B_BUFFER];
+	int i;
+	int ti = 0;		/* Tag integer */
+	int cn = 0;		/* Category Number */
+	int mode = CATEGORY;
+	int ltagstotal;
+	char linetags[B_BUFFER][BUFFER];
+	int tagnum;
+
+	struct tagsnums {
+		char name[BUFFER];
+		int amount;
+		int catnum;		/* Category Number */
+	} tag[B_BUFFER];
+
+	struct catna {
+		char name[BUFFER];
+		int amount;
+	} cat[B_BUFFER];
+
+	int prevcatnum = -1;
 
 	fp = fopen(FILETARGET, "r");
 	if (fp == NULL) {
 		printf("File \"tags\" doesn't exit in current directory\n");
 		return;
 	}
+
 	while (fgets(line, B_BUFFER, fp) != NULL) {
-		if (strcmp(line, "\n") == 0)
-			break;
-		printf("%s", line);
+		if (strcmp(line, "\n") == 0) {
+			mode = FILES;
+		} else if (mode == CATEGORY) {
+			ltagstotal = afterddff_strcpytomulti(linetags, 
+					line, 0);
+			if (ltagstotal == 0) {
+				tag[ti].catnum = cn;
+				tag[ti].amount = -1;
+				memcpy(tag[ti].name, "#", sizeof tag[ti].name);
+				ti++;
+			}
+			for (i = 0; i < ltagstotal; i++, ti++) {
+				tag[ti].catnum = cn;
+				tag[ti].amount = 0;
+				memcpy(tag[ti].name, linetags[i], 
+						sizeof tag[ti].name);
+			}
+			cat[cn].amount = 0;
+			tilldd_strcpy(cat[cn++].name, line);
+		} else {
+			ltagstotal = afterddff_strcpytomulti(linetags,
+					line, 1);
+			for (i = 0; i < ltagstotal; i++) {
+				tagnum = atoi(linetags[i]);
+				tag[tagnum].amount++;
+				cat[tag[tagnum].catnum].amount++;
+			}
+		}
 		memset(line, 0, sizeof line);
 	}
 	fclose(fp);
+
+	putchar('\b');
+	for (i = 0; i < ti; i++) {
+		if (prevcatnum != tag[i].catnum)
+			printf("\n%s (%d):\n\t", cat[tag[i].catnum].name, cat[tag[i].catnum].amount);
+		if (tag[i].amount == -1)		/* Empty category */
+			printf(">>EMPTY CATEGORY<<");
+		else if (tag[i+1].catnum == tag[i].catnum)
+			printf("%s (%d), ", tag[i].name, tag[i].amount);
+		else	/* Last tag in category */
+			printf("%s (%d)", tag[i].name, tag[i].amount);
+		prevcatnum = tag[i].catnum;
+	}
+	putchar('\n');
 }
 
 void getchange(int *min, int *addby, int max, char *argv[])
@@ -783,6 +841,130 @@ removefiles_linereset:
 	}
 
 	writefile(flines, i);
+}
+
+void outallfiles(void)
+{
+	FILE *fp;
+
+	/* File reading variables */
+	char slines[B_BUFFER][BUFFER];
+	int k = 0;
+	char line[B_BUFFER];
+	int mode = CATEGORY;
+
+	if (!(checkifexist(FILETARGET)))
+		return;
+
+	fp = fopen(FILETARGET, "r");
+	while (fgets(line, B_BUFFER, fp) != NULL) {
+		if (strcmp(line, "\n") == 0) {
+			mode = FILES;
+			goto reset_line;
+		} else if (mode == CATEGORY) {
+			goto reset_line;
+		}
+		getfname(slines[k++], line);
+reset_line:
+		memset(line, 0, sizeof line);
+	}
+	fclose(fp);
+
+	/* Outputs out result of the search */
+	for (int i=0; i<k; i++)
+		printf("%s ", slines[i]);
+	putchar('\n');
+}
+
+void filesinfos(int argc, char *argv[])
+{
+	FILE *fp;
+
+	/* File reading variables */
+	int i, ti = 0;
+	char line[B_BUFFER];
+	int mode = CATEGORY;
+
+	int ltagstotal;
+
+	struct tagsnums {
+		char name[BUFFER];
+		char catn[BUFFER];
+	} tag[B_BUFFER];
+
+	char linecat[BUFFER];
+	char linetags[B_BUFFER][BUFFER];
+	char linefile[BUFFER];
+
+	int filematch;
+	int tagnum;
+	int filesfound = 0;
+
+	char endchars[3] = ", ";
+
+	if (argc <= 2) {
+		printf("Error: You must state at least one file\n");
+		return;
+	} else if (!(checkifexist(FILETARGET)))
+		return;
+
+	fp = fopen(FILETARGET, "r");
+	while (fgets(line, B_BUFFER, fp) != NULL) {
+		if (strcmp(line, "\n") == 0) {
+			mode = FILES;
+		} else if (mode == CATEGORY) {
+			ltagstotal = afterddff_strcpytomulti(linetags, 
+					line, 0);
+			tilldd_strcpy(linecat, line);
+			if (ltagstotal == 0) {
+				memcpy(tag[ti].catn, linecat, 
+						sizeof tag[ti].catn);
+				memcpy(tag[ti].name, "#", sizeof tag[ti].name);
+				ti++;
+			}
+			for (i = 0; i < ltagstotal; i++, ti++) {
+				memcpy(tag[ti].catn, linecat, 
+						sizeof tag[ti].catn);
+				memcpy(tag[ti].name, linetags[i], 
+						sizeof tag[ti].name);
+			}
+		} else {
+			// WORK ON
+			filematch = 0;
+			getfname(linefile, line);
+			for (i = 2; i < argc; i++) {
+				if (!strcmp(linefile, argv[i])) {
+					filematch = 1;
+					filesfound = 1;
+					break;
+				}
+			}
+			if (filematch) {
+				ltagstotal = afterddff_strcpytomulti(linetags,
+						line, 1);
+				printf("%s [%d tags]:\n\t", linefile, 
+						ltagstotal);
+				for (i = 0; i < ltagstotal; i++) {
+					tagnum = atoi(linetags[i]);
+					if (i == ltagstotal-1) {
+						memcpy(endchars, "\n", sizeof 
+								endchars);
+					}
+					printf("%s [%s]%s", tag[tagnum].name, 
+							tag[tagnum].catn, 
+							endchars);
+				}
+				memcpy(endchars, ", ", sizeof endchars);
+			}
+		}
+		memset(line, 0, sizeof line);
+	}
+	fclose(fp);
+	if (!filesfound) {
+		printf("Notice: No files found with the files given\n");
+		return;
+	}
+
 }
 
 void searchtags(int argc, char *argv[])
@@ -1265,8 +1447,9 @@ void readfile(void)
 
 void usage(void)
 {
-	printf("usage: {create | read | version | help | search | categories |"
-			" add %s | rename %s | remove %s}\n",
+	printf("usage: {create | read | version | help | search | all |"
+			" categories | show-tags | add %s | rename %s |"
+			" remove %s}\n",
 			usage_error[ADD], usage_error[RENAME],
 			usage_error[REMOVE]);
 }
@@ -1292,6 +1475,10 @@ int main(int argc, char *argv[])
 			par2(argc, argv, RENAME);
 		else if (!strcmp(argv[1], "remove"))
 			par2(argc, argv, REMOVE);
+		else if (!strcmp(argv[1], "all"))
+			outallfiles();
+		else if (!strcmp(argv[1], "show-tags"))
+			filesinfos(argc, argv);
 		else
 			usage();
 	} else

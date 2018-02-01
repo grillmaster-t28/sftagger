@@ -3,7 +3,7 @@ sftagger - simple file tagging tool
 sftagger is a simple file tagging tool written in C
 
 Current Stable Version: 2018/01/10 (2.0 Release)
-Development Version: 2018/01/31 (2.1 RC2)
+Development Version: 2018/02/01 (3.0a-01)
 
 Always use the stable version over the development version as development 
 version are prone to breaking your "tags" file.
@@ -27,6 +27,7 @@ Usage
       - Prompt: "arts plain" - adds the tags "arts" and "plain" to the files 
                                that has ".png" in the suffix
 - categories - Lists all categories and tags
+- all - Prints out all files available, used like search function but for all
 - rename category - Rename the category specified
     - EX: "rename category bar foo" - replaces category "foo" with "bar"
 - rename tag - Rename the tag specified
@@ -70,7 +71,7 @@ Dependencies
 Tested on
 ---------
 - Linux
-    - Debian Unstable GNU/Linux using GCC and Clang - 2018/01/09
+    - Debian Unstable GNU/Linux using GCC and Clang - 2018/02/01
 - BSD
     - OpenBSD 6.2 using Clang
 
@@ -78,14 +79,25 @@ TODO (For future releases)
 --------------------------
 - More bug-fixes and preventions in place
 - Inherited subcategories (Not sure how it will be implemented yet)
+- Have proper buffering
 
 Changelog
 ---------
+- 3.0
+    - 2018/02/01 (3.0a-01)
+        - 2.1 versions named properly in changelog and skipped versioning 2.1
+	  for 3.0
+	- Improvements: "categories" command also outputs the amount of files
+	  each tags has, and the total of files under per category. Also has
+	  slightly different formatting.
+	- New feature: Outputs all files available using "sftagger all"
+	- New feature: Outputs all tags (and category per tag) under the 
+	  filenames given using "sftagger show-tags"
 - 2.1
-    - 2018/01/31 (2.0 RC2)
+    - 2018/01/31 (2.1 RC2)
         - Fixed quick sort not sorting properly when it comes to lower amount
 	  of items
-    - 2018/01/30 (2.0 RC1)
+    - 2018/01/30 (2.1 RC1)
         - More efficient way of sorting: Changed from bubble sort to quick sort
 	- Source code: Source no longer de-references while nothing need to 
 	  modify to it
