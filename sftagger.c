@@ -14,9 +14,8 @@
 #define S_BUFFER 64
 #define BUFFER 256
 #define B_BUFFER 2560
-#define BB_BUFFER 10240
 
-#define VERSION "3.0a-03 - 2018/02/08"
+#define VERSION "3.0a-04 - 2018/02/08"
 #define FILETARGET "tags-dev"
 #define FILETARGETTEMP ".temp-" FILETARGET
 
@@ -137,6 +136,17 @@ void writefile(char flines[][BUFFER], int max, const char filename[])
 	fclose(fp);
 }
 
+unsigned int countlines(const char filename[])
+{
+	FILE *fp = fopen(filename, "r");
+	int i = 0;
+	char line[B_BUFFER];
+	while (fgets(line, B_BUFFER, fp) != NULL)
+		i++;
+	fclose(fp);
+	return i;
+}
+
 /* Creates a new tags file */
 int createfile(void)
 {
@@ -200,20 +210,6 @@ void quicksort(char **str, int low, int high)
 		quicksort(str, pivot + 1, high);
 	}
 }
-
-/*
-int str_sort(char string[][BUFFER], int size)
-{
-	int min;
-	for (min=0; min<size; min++)
-		if (strcmp(string[min], "\n") == 0)
-			break;
-	if (min >= size-1)
-		return -1;	// Error 
-	quicksort(string, min+1, size-1);
-	return size;
-}
-*/
 
 char determine_ignoretill(int mode, char firch)
 {
@@ -692,7 +688,8 @@ void ar_tagsfiles(int argc, char *argv[], int type)
 	int *ltagsnums;
 
 	/* Tags found */
-	char **filesfound = malloc(BB_BUFFER * sizeof *filesfound);
+	unsigned int filelines = countlines(FILETARGET);
+	char **filesfound = malloc(filelines * sizeof *filesfound);
 	int m = 0, found;
 	char newnumtags[B_BUFFER];
 	char strtagnum[B_BUFFER];
@@ -780,7 +777,7 @@ skip_to_linereset_cat:
 	if (type == REMOVE)
 		goto skip_to_filetags_filewrite;
 
-	char **nflines = malloc(BB_BUFFER * sizeof *nflines);
+	char **nflines = malloc(filelines-m * sizeof *nflines);
 	int nfl = 0;		// Limit
 	int nfm = 0;		// Min
 
@@ -1135,7 +1132,7 @@ void ar_tags(int argc, char *argv[], int type)
 	int maxtags;
 
 	char reject[B_BUFFER][BUFFER];
-	int t=0, dubcheck = -1;
+	int t = 0, dubcheck = -1;
 	char strtoformat2[B_BUFFER];
 	char strtoformat3[B_BUFFER];
 
@@ -1318,7 +1315,6 @@ void ar_tags(int argc, char *argv[], int type)
 			if (l == 0) {	/* If no change needed */
 				fprintf(fpt, "%s", line);
 			} else {
-				strncat(strtoformat2, "\n", 2);
 				rmdubspaces(strtoformat3, strtoformat2);
 				maxtags = afterddff_tagsamountout(strtoformat3,
 						1);
