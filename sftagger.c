@@ -12,20 +12,17 @@
 #include <ctype.h>
 
 #define S_BUFFER 64
-#define BUFFER 256		//256
-#define B_BUFFER 1280		//1280
+#define BUFFER 256
+#define B_BUFFER 2560
+#define BB_BUFFER 10240
 
-#define VERSION "3.0a-02 - 2018/02/06"
+#define VERSION "3.0a-03 - 2018/02/08"
 #define FILETARGET "tags-dev"
 #define FILETARGETTEMP ".temp-" FILETARGET
 
 #define RENAME(x, y) \
 	if (rename(x, y)) \
 		printf("Error: Unable to rename file\n");
-
-/* DEVELOPMENT AREA INFO:
- * 	SEARCH FOR: TEST WORK IMPROVE SEG_FAULT CHECK
- */
 
 enum {
 	CATEGORY, FILES,
@@ -40,35 +37,6 @@ static const char *usage_error[] = {
 	"{category | tag}",
 	"{category | tags | from-tags | files}"
 };
-
-// WORK ON
-int *getflinetotal()
-{
-	FILE *fp;
-	int l = 0, w = 0, pw = 0, ch;
-	int *retarr = malloc(2 * sizeof(int));
-
-	if ((fp = fopen(FILETARGET, "r")) == NULL) {
-		retarr[0] = -1;
-		retarr[1] = -1;
-		return retarr;
-	}
-
-	while ((ch = fgetc(fp)) != EOF) {
-		w++;
-		if (ch == '\n') {
-			l++;
-			if (w > pw)
-				pw = w;
-			w = 0;
-		}
-	}
-	retarr[0] = l;
-	retarr[1] = pw;
-	fclose(fp);
-
-	return retarr;
-}
 
 int specialchar(char c)
 {
@@ -203,7 +171,7 @@ void strswap(char *str1, char *str2)
 }
 
 /* Quicksorting strings */
-int partition(char str[][BUFFER], int low, int high) 
+int partition(char **str, int low, int high) 
 {
 	char pivot[BUFFER];
 	char lwrstr1[BUFFER], lwrstr2[BUFFER];
@@ -224,7 +192,7 @@ int partition(char str[][BUFFER], int low, int high)
 	return (i + 1);
 }
 
-void quicksort(char str[][BUFFER], int low, int high)
+void quicksort(char **str, int low, int high)
 {
 	if (low < high) {
 		int pivot = partition(str, low, high);
@@ -233,6 +201,7 @@ void quicksort(char str[][BUFFER], int low, int high)
 	}
 }
 
+/*
 int str_sort(char string[][BUFFER], int size)
 {
 	int min;
@@ -240,10 +209,11 @@ int str_sort(char string[][BUFFER], int size)
 		if (strcmp(string[min], "\n") == 0)
 			break;
 	if (min >= size-1)
-		return -1;	/* Error */
+		return -1;	// Error 
 	quicksort(string, min+1, size-1);
 	return size;
 }
+*/
 
 char determine_ignoretill(int mode, char firch)
 {
@@ -698,7 +668,7 @@ void ar_tagsfiles(int argc, char *argv[], int type)
 	FILE *fpt;
 
 	/* File reading variables */
-	int j, k;
+	unsigned long j, k;
 	char line[B_BUFFER];
 
 	char filenameofline[B_BUFFER];
@@ -722,7 +692,7 @@ void ar_tagsfiles(int argc, char *argv[], int type)
 	int *ltagsnums;
 
 	/* Tags found */
-	char filesfound[B_BUFFER][BUFFER];
+	char **filesfound = malloc(BB_BUFFER * sizeof *filesfound);
 	int m = 0, found;
 	char newnumtags[B_BUFFER];
 	char strtagnum[B_BUFFER];
@@ -773,8 +743,9 @@ void ar_tagsfiles(int argc, char *argv[], int type)
 				if (strcmp(argablestr, filenameofline) != 0)
 					continue;
 				printf("FOUND: \"%s\"\n", argv[j]);
+				filesfound[m] = malloc(B_BUFFER * sizeof *filesfound[m]);
 				memcpy(filesfound[m], argv[j],
-						sizeof filesfound[m]);
+						strlen(argv[j])+1);
 				m++;
 				ltagsnums = intcpy(tagsnums, tags_amount);
 				ltagsmax = afterddff_strcpytomulti(linetags,
@@ -809,7 +780,7 @@ skip_to_linereset_cat:
 	if (type == REMOVE)
 		goto skip_to_filetags_filewrite;
 
-	char nflines[B_BUFFER][BUFFER];
+	char **nflines = malloc(BB_BUFFER * sizeof *nflines);
 	int nfl = 0;		// Limit
 	int nfm = 0;		// Min
 
@@ -829,6 +800,7 @@ skip_to_linereset_cat:
 		}
 		if (found == 0 && strcmp(argv[j], FILETARGET)) {
 			enspecch(argablestr, argv[j]);
+			nflines[nfl] = malloc(B_BUFFER * sizeof *nflines[nfl]);
 			snprintf(nflines[nfl++], strlen(argablestr)+
 					strlen(newnumtags)+2, "%s%s\n", 
 					argablestr, newnumtags);
@@ -837,19 +809,26 @@ skip_to_linereset_cat:
 		}
 	}
 
+	free(filesfound);
+
 	/* Sorts the new files strings */
 	quicksort(nflines, 0, nfl-1);
 
 	/* Applying the new files (temp1 to temp2 file) */
 	fpt = fopen(FILETARGETTEMP, "r");
 	FILE *fpt2 = fopen(FILETARGETTEMP "-2", "w");
+	mode = CATEGORY;
 	while (fgets(line, B_BUFFER, fpt) != NULL) {
-		for (j=nfm; j<nfl; j++) {
-			if (strcmp(nflines[j], line) < 0) {
-				fprintf(fpt2, "%s", nflines[j]);
-				nfm++;
-			} else {
-				break;
+		if (!strcmp(line, "\n")) {
+			mode = FILES;
+		} else if (mode == FILES) {
+			for (j=nfm; j<nfl; j++) {
+				if (strcmp(nflines[j], line) < 0) {
+					fprintf(fpt2, "%s", nflines[j]);
+					nfm++;
+				} else {
+					break;
+				}
 			}
 		}
 		fprintf(fpt2, "%s", line);
@@ -859,6 +838,7 @@ skip_to_linereset_cat:
 	for (j=nfm; j<nfl; j++)
 		fprintf(fpt2, "%s", nflines[j]);
 	fclose(fpt);
+	free(nflines);
 	RENAME(FILETARGETTEMP "-2", FILETARGETTEMP);
 
 skip_to_filetags_filewrite:
