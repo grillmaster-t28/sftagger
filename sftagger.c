@@ -15,7 +15,7 @@
 #define BUFFER 256
 #define B_BUFFER 2560
 
-#define VERSION "3.0a-04 - 2018/02/08"
+#define VERSION "3.0a-05 - 2018/02/11"
 #define FILETARGET "tags-dev"
 #define FILETARGETTEMP ".temp-" FILETARGET
 
@@ -45,7 +45,7 @@ int specialchar(char c)
 }
 
 /* Adds in backslash if it's a special character */
-void enspecch(char *dest, char src[])
+void enspecch(char *dest, const char src[])
 {
 	do {
 		if (specialchar(*src))
@@ -53,7 +53,7 @@ void enspecch(char *dest, char src[])
 	} while ((*dest++ = *src++) != '\0');
 }
 
-void strtolower(char *dest, char src[])
+void strtolower(char *dest, const char src[])
 {
 	while ((*dest++ = tolower(*src++)) != '\0')
 		;
@@ -71,7 +71,7 @@ void multi_strtolower(char string[][BUFFER], int size)
 void multi_strcpy(char dest[][BUFFER], char src[][BUFFER], int size)
 {
 	for (int i=0; i<size; i++)
-		memcpy(dest[i], src[i], sizeof(dest[i]));
+		memcpy(dest[i], src[i], strlen(src[i]) + 1);
 }
 
 void multi_strclr(char string[][BUFFER], int size)
@@ -81,7 +81,7 @@ void multi_strclr(char string[][BUFFER], int size)
 }
 
 /* Remove extra white-spaces */
-void rmdubspaces(char *dest, char src[])
+void rmdubspaces(char *dest, const char src[])
 {
 	char prev = ' ';
 	while (*src != '\0') {
@@ -93,7 +93,7 @@ void rmdubspaces(char *dest, char src[])
 }
 
 /* Concatenate string plus space */
-void strcat_as(char *dest, char add[])
+void strcat_as(char *dest, const char add[])
 {
 	while (*dest++ != '\0')
 		;
@@ -105,7 +105,7 @@ void strcat_as(char *dest, char add[])
 }
 
 /* Copy string without newline */
-void strcpy_wonl(char *dest, char src[])
+void strcpy_wonl(char *dest, const char src[])
 {
 	while ((*dest++ = *src++) != '\n')
 		;
@@ -218,7 +218,7 @@ char determine_ignoretill(int mode, char firch)
 	return ':';
 }
 
-int afterddff_tagsamountout(char src[], int mode)
+int afterddff_tagsamountout(const char src[], int mode)
 {
 	int i=0;
 	char ignoretill = determine_ignoretill(mode, *src);
@@ -242,7 +242,7 @@ int afterddff_tagsamountout(char src[], int mode)
 	return i;
 }
 
-int afterddff_strcpytomulti(char dest[][BUFFER], char src[], int mode)
+int afterddff_strcpytomulti(char dest[][BUFFER], const char src[], int mode)
 {
 	int i=0;
 	char ignoretill = determine_ignoretill(mode, *src);
@@ -291,7 +291,7 @@ int gettags_wfilt(int numtags[BUFFER], char curtags[][BUFFER], int ctagstotal)
 			for (i=0; i<ctagstotal; i++) {
 				if (strcmp(curtags[i], linetags[j]) == 0) {
 					memcpy(allowedtags[k], curtags[i], 
-							sizeof allowedtags[k]);
+							strlen(curtags[i])+1);
 					numtags[k++] = n;
 				}
 			}
@@ -303,14 +303,15 @@ int gettags_wfilt(int numtags[BUFFER], char curtags[][BUFFER], int ctagstotal)
 	for (i=0; i<ctagstotal; i++) {
 		curtags[i][0] = '\0';
 		if (i<k)
-			memcpy(curtags[i], allowedtags[i], sizeof curtags[i]);
+			memcpy(curtags[i], allowedtags[i], 
+					strlen(allowedtags[i]) + 1);
 	}
 
 	return k;
 }
 
 /* Gets the filename of its line */
-void getfname(char *dest, char src[])
+void getfname(char *dest, const char src[])
 {
 	int spec_ch = 0;
 
@@ -330,7 +331,7 @@ int *intcpy(int *src, size_t len)
 	return dest;
 }
 
-void tilldd_strcpy(char *dest, char src[])
+void tilldd_strcpy(char *dest, const char src[])
 {
 	while ((*dest++ = *src++) != ':')
 		;
@@ -391,7 +392,7 @@ void listcattags(void)
 				tag[ti].catnum = cn;
 				tag[ti].amount = 0;
 				memcpy(tag[ti].name, linetags[i], 
-						sizeof tag[ti].name);
+						strlen(linetags[i]) + 1);
 			}
 			cat[cn].amount = 0;
 			tilldd_strcpy(cat[cn++].name, line);
@@ -483,7 +484,7 @@ void getchange(int *min, int *addby, int max, char *argv[])
 }
 
 /* Duplicate checking */
-int checkdup(char src_a[][BUFFER], char src_b[], int a_limit)
+int checkdup(char src_a[][BUFFER], const char src_b[], int a_limit)
 {
 	for (int i=0; i<a_limit; i++) {
 		if (strcmp(src_a[i], src_b) == 0)
@@ -493,7 +494,7 @@ int checkdup(char src_a[][BUFFER], char src_b[], int a_limit)
 }
 
 /* Remove the rejects */
-void rm_rejects(char src[], int limit, char reject[][BUFFER])
+void rm_rejects(char *src, int limit, char reject[][BUFFER])
 {
 	char strtoformat[B_BUFFER], strtocat[B_BUFFER];
 	char linetags[B_BUFFER][BUFFER];
@@ -509,14 +510,14 @@ void rm_rejects(char src[], int limit, char reject[][BUFFER])
 				linechanged = 1;
 				break;
 			}
-			memcpy(strtocat, " ", sizeof(strtocat));
+			memcpy(strtocat, " ", 2);
 			strncat(strtocat, linetags[j], strlen(linetags[j]));
 			strncat(strtoformat, strtocat, strlen(strtocat));
 		}
 	}
 	if (linechanged == 1) {
 		strncat(strtoformat, "\n", 2);
-		memcpy(src, strtoformat, sizeof &src);
+		memcpy(src, strtoformat, strlen(strtoformat) + 1);
 	}
 }
 
@@ -961,15 +962,15 @@ void filesinfos(int argc, char *argv[])
 			tilldd_strcpy(linecat, line);
 			if (ltagstotal == 0) {
 				memcpy(tag[ti].catn, linecat, 
-						sizeof tag[ti].catn);
-				memcpy(tag[ti].name, "#", sizeof tag[ti].name);
+						strlen(linecat) + 1);
+				memcpy(tag[ti].name, "#", 2);
 				ti++;
 			}
 			for (i = 0; i < ltagstotal; i++, ti++) {
 				memcpy(tag[ti].catn, linecat, 
-						sizeof tag[ti].catn);
+						strlen(linecat) + 1);
 				memcpy(tag[ti].name, linetags[i], 
-						sizeof tag[ti].name);
+						strlen(linetags[i]) + 1);
 			}
 		} else {
 			filematch = 0;
@@ -989,14 +990,13 @@ void filesinfos(int argc, char *argv[])
 				for (i = 0; i < ltagstotal; i++) {
 					tagnum = atoi(linetags[i]);
 					if (i == ltagstotal-1) {
-						memcpy(endchars, "\n", sizeof 
-								endchars);
+						memcpy(endchars, "\n", 2);
 					}
 					printf("%s [%s]%s", tag[tagnum].name, 
 							tag[tagnum].catn, 
 							endchars);
 				}
-				memcpy(endchars, ", ", sizeof endchars);
+				memcpy(endchars, ", ", 3);
 			}
 		}
 		memset(line, 0, sizeof line);
@@ -1054,7 +1054,7 @@ void searchtags(int argc, char *argv[])
 		return;
 
 	for (i=0; i<argc-2; i++)
-		memcpy(ftagsnames[i], argv[i+2], sizeof ftagsnames[i]);
+		memcpy(ftagsnames[i], argv[i+2], strlen(argv[i+2]) + 1);
 	/* Get and exclude tags in file as well as assign to number */
 	maxtags = gettags_wfilt(ftagsnums, ftagsnames, argc-2);
 	if (maxtags == 0) {
@@ -1241,7 +1241,7 @@ void ar_tags(int argc, char *argv[], int type)
 			}
 			dubcheck = i;
 			strncat(strtoformat, "\n", 2);
-			memcpy(cflines[i], strtoformat, sizeof(cflines[i]));
+			memcpy(cflines[i], strtoformat, strlen(strtoformat)+1);
 			i++;
 			memset(line, 0, sizeof line);
 			base += maxtags;
@@ -1251,7 +1251,7 @@ void ar_tags(int argc, char *argv[], int type)
 				dup = checkdup(linetags, argv[j], maxtags);
 				if (dup >= 0) {
 					memcpy(reject[t], argv[j], 
-							sizeof(reject[t]));
+							strlen(argv[j]) + 1);
 					t++;
 					if (type == ADD_TAGS) {
 						printf("Duplicate \"%s\" won't"
@@ -1261,7 +1261,7 @@ void ar_tags(int argc, char *argv[], int type)
 				}
 			}
 			base += maxtags;
-			memcpy(cflines[i], line, sizeof cflines[i]);
+			memcpy(cflines[i], line, strlen(line) + 1);
 			i++;
 			memset(line, 0, sizeof line);
 			continue;
@@ -1305,8 +1305,7 @@ void ar_tags(int argc, char *argv[], int type)
 								tagnum+addby);
 					}
 				} else if (type >= 1) {
-					memcpy(numstrnew, "\0", 
-							sizeof numstrnew);
+					memcpy(numstrnew, "\0", 2);
 					l++;
 				}
 				strncat(strtoformat2, numstrnew, 
@@ -1341,7 +1340,7 @@ void ar_tags(int argc, char *argv[], int type)
 }
 
 /* Returns string after colon */
-char *afterdd_strreturn(char src[])
+char *afterdd_strreturn(const char src[])
 {
 	int i=0;
 	char *dest = malloc(B_BUFFER);
@@ -1416,7 +1415,7 @@ void rename_tc(int argc, char *argv[], char *str_rntype)
 					renamed = 1;
 				} else {
 					memcpy(temptag, linetags[j], 
-							sizeof temptag);
+							strlen(linetags[j])+1);
 					snprintf(linetags[j], 
 							strlen(temptag)+2, 
 							" %s", temptag);
