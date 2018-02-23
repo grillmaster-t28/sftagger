@@ -15,7 +15,7 @@
 #define BUFFER 256
 #define B_BUFFER 2560
 
-#define VERSION "3.0a-05 - 2018/02/11"
+#define VERSION "3.0-RC1 - 2018/02/23"
 #define FILETARGET "tags-dev"
 #define FILETARGETTEMP ".temp-" FILETARGET
 
@@ -651,7 +651,7 @@ int filesrmcheck(char *newline, char filenameofline[], int ltagsmax,
 }
 
 /* Add tag(s) to file(s) and remove tag(s) from file(s) */
-void ar_tagsfiles(int argc, char *argv[], int type)
+void ar_tagsfiles(int argc, char **argv, int type)
 {
 	if (argc <= 3) {
 		printf("Error: You must state at least one filename\n");
@@ -778,7 +778,7 @@ skip_to_linereset_cat:
 	if (type == REMOVE)
 		goto skip_to_filetags_filewrite;
 
-	char **nflines = malloc(filelines-m * sizeof *nflines);
+	char **nflines = malloc(argc * sizeof *nflines);
 	int nfl = 0;		// Limit
 	int nfm = 0;		// Min
 
@@ -806,8 +806,6 @@ skip_to_linereset_cat:
 			memset(argablestr, 0, sizeof argablestr);
 		}
 	}
-
-	free(filesfound);
 
 	/* Sorts the new files strings */
 	quicksort(nflines, 0, nfl-1);
@@ -840,6 +838,7 @@ skip_to_linereset_cat:
 	RENAME(FILETARGETTEMP "-2", FILETARGETTEMP);
 
 skip_to_filetags_filewrite:
+	free(filesfound);
 	RENAME(FILETARGETTEMP, FILETARGET);
 }
 
@@ -1158,14 +1157,13 @@ void ar_tags(int argc, char *argv[], int type)
 	char rmtags[B_BUFFER][BUFFER];
 	int rmmax;
 
-	int hasfpt = 0;
-
 	if (type == ADD_TAGS)
 		getchange(&min, &addby, argc-1, argv);
 	else if (type >= 1)
 		addby = 0;
 
 	fp = fopen(FILETARGET, "r");
+	fpt = fopen(FILETARGETTEMP, "w");
 	while (fgets(line, B_BUFFER, fp) != NULL) {
 		/* newline changes to file mode */
 		maxtags = 0;
@@ -1173,9 +1171,8 @@ void ar_tags(int argc, char *argv[], int type)
 			mode = FILES;
 			if (type != 2 && dubcheck != -1)
 				rm_rejects(cflines[dubcheck], t, reject);
-			writefile(cflines, i, FILETARGETTEMP);
-			fpt = fopen(FILETARGETTEMP, "a");
-			hasfpt = 1;
+			for (j = 0; j < i; j++)
+				fprintf(fpt, "%s", cflines[j]);
 		} else if (mode == CATEGORY) {
 			tilldd_strcpy(strcompare, line);
 			maxtags = afterddff_strcpytomulti(linetags, line, 0);
@@ -1317,8 +1314,13 @@ void ar_tags(int argc, char *argv[], int type)
 				rmdubspaces(strtoformat3, strtoformat2);
 				maxtags = afterddff_tagsamountout(strtoformat3,
 						1);
-				if (maxtags > 0)
+				if (maxtags > -1) {
 					fprintf(fpt, "%s\n", strtoformat3);
+				} else {
+					printf("WARNING: Filename has no tags,"
+							" won't be included."
+							"\n");
+				}
 				memset(strtoformat3, 0, sizeof strtoformat3);
 			}
 			memset(strtoformat2, 0, sizeof strtoformat2);
@@ -1328,8 +1330,7 @@ void ar_tags(int argc, char *argv[], int type)
 		memset(line, 0, sizeof line);
 	}
 	fclose(fp);
-	if (hasfpt)
-		fclose(fpt);
+	fclose(fpt);
 
 	if (validcategory == 0) {
 		printf("The category provided isn't valid\n");
