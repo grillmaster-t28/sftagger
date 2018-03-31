@@ -959,12 +959,6 @@ void filesinfos(int argc, char *argv[])
 			ltagstotal = afterddff_strcpytomulti(linetags, 
 					line, 0);
 			tilldd_strcpy(linecat, line);
-			if (ltagstotal == 0) {
-				memcpy(tag[ti].catn, linecat, 
-						strlen(linecat) + 1);
-				memcpy(tag[ti].name, "#", 2);
-				ti++;
-			}
 			for (i = 0; i < ltagstotal; i++, ti++) {
 				memcpy(tag[ti].catn, linecat, 
 						strlen(linecat) + 1);

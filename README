@@ -88,6 +88,7 @@ Changelog
     - 2018/03/31 (3.0 Release)
         - Released as 3.0
 	- Bug fix: Fixed renaming tag messing up tags
+	- Bug fix: Fixed empty category/tag being shown in "show-tags"
 	- Manpage: Slight change under search example
     - 2018/02/23 (3.0 RC1)
         - Moved from alpha to release candidate
