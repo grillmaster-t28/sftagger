@@ -29,7 +29,8 @@ Outputs the usage/synopsis
 Outputs the result of the search
 .TP
 .B categories
-Outputs the categories and its tags as well as the amount of files has each tag
+Outputs the categories and its tags as well as the amount of files has each
+tag. Also puts empty categories in the end of output
 .TP
 .B add 
 Allows to add category, tags, and appends tags per files
@@ -81,7 +82,7 @@ Outputs the tags (and its category) of the filenames given, as well as amount
 of tags each file has
 .SH EXAMPLES
 .TP
-.B sftagger search foo | xargs -o sxiv
+.B sftagger search foo | xargs sxiv
 Use 
 .BR xargs (1)
 to make use of the outputs to the program you want to use it with

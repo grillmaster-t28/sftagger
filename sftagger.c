@@ -15,8 +15,8 @@
 #define BUFFER 256
 #define B_BUFFER 2560
 
-#define VERSION "3.0-RC1 - 2018/02/23"
-#define FILETARGET "tags-dev"
+#define VERSION "3.0 Release - 2018/03/31"
+#define FILETARGET "tags"
 #define FILETARGETTEMP ".temp-" FILETARGET
 
 #define RENAME(x, y) \
@@ -1380,6 +1380,7 @@ void rename_tc(int argc, char *argv[], char *str_rntype)
 	char linetags[B_BUFFER][BUFFER];
 	char temptag[B_BUFFER];
 	int dup = 0;
+	char linetagsformat[B_BUFFER] = "\0";
 
 	fp = fopen(FILETARGET, "r");
 	fpt = fopen(FILETARGETTEMP, "w");
@@ -1402,7 +1403,6 @@ void rename_tc(int argc, char *argv[], char *str_rntype)
 		} else if (type == CATEGORY && !renamed &&
 				rntype == TAG_NAME &&
 				ltagsmax > 0) {
-			char linetagsformat[B_BUFFER];
 			if (checkdup(linetags, argv[3], ltagsmax) != -1)
 				dup = 1;
 			for (j=0; j<ltagsmax; j++) {
@@ -1425,6 +1425,7 @@ void rename_tc(int argc, char *argv[], char *str_rntype)
 						strlen(linetags[j]));
 			}
 			fprintf(fpt, "%s:%s\n", strcompare, linetagsformat);
+			memset(linetagsformat, 0, sizeof linetagsformat);
 			continue;
 		} else if (type == CATEGORY && renamed &&
 				rntype == TAG_NAME &&

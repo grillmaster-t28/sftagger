@@ -2,8 +2,8 @@ sftagger - simple file tagging tool
 ===================================
 sftagger is a simple file tagging tool written in C
 
-Current Stable Version: 2018/01/10 (2.0 Release)
-Development Version: 2018/02/23 (3.0-RC1)
+Current Stable Version: 2018/03/31 (3.0 Release)
+Development Version: Will be 3.1a-01 or 4.0a-01
 
 Always use the stable version over the development version as development 
 version are prone to breaking your "tags" file.
@@ -59,7 +59,7 @@ Using search
 ------------
 Use xargs to make use of the outputs to the program you want to use it with
 
-    $ sftagger search foo | xargs -o sxiv
+    $ sftagger search foo | xargs sxiv
 
 Replace "foo" with your searches (can be more than one keyword(s)) and "sxiv"
 with your program of choice
@@ -85,6 +85,10 @@ TODO (For future releases)
 Changelog
 ---------
 - 3.0
+    - 2018/03/31 (3.0 Release)
+        - Released as 3.0
+	- Bug fix: Fixed renaming tag messing up tags
+	- Manpage: Slight change under search example
     - 2018/02/23 (3.0 RC1)
         - Moved from alpha to release candidate
 	- Bug fix: "Bus Error" on large amount (more new than old) of new
