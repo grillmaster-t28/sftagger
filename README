@@ -3,7 +3,7 @@ sftagger - simple file tagging tool
 sftagger is a simple file tagging tool written in C
 
 Current Stable Version: 2018/03/31 (3.0 Release)
-Development Version: Will be 3.1a-01 or 4.0a-01
+Development Version: 2018/06/01 (3.1 RC1)
 
 Always use the stable version over the development version as development 
 version are prone to breaking your "tags" file.
@@ -72,6 +72,7 @@ Tested on
 ---------
 - Linux
     - Debian Unstable GNU/Linux using GCC and Clang - 2018/02/01
+    - Void Linux using GCC - 2018/06/01
 - BSD
     - OpenBSD 6.2 using Clang
 
@@ -84,80 +85,85 @@ TODO (For future releases)
 
 Changelog
 ---------
+- 3.1
+    - 2018/06/01 (3.1 RC1)
+        - Cleaner to read parameter checking if statements
+        - Bug fix: Fixed inserting new files prioritising upper-case filenames
+        - README tabs screw ups fixed
 - 3.0
     - 2018/03/31 (3.0 Release)
         - Released as 3.0
-	- Bug fix: Fixed renaming tag messing up tags
-	- Bug fix: Fixed empty category/tag being shown in "show-tags"
-	- Manpage: Slight change under search example
-    - 2018/02/23 (3.0 RC1)
+        - Bug fix: Fixed renaming tag messing up tags
+        - Bug fix: Fixed empty category/tag being shown in "show-tags"
+        - Manpage: Slight change under search example
+        - 2018/02/23 (3.0 RC1)
         - Moved from alpha to release candidate
-	- Bug fix: "Bus Error" on large amount (more new than old) of new
-	  files/directory being added got fixed
-	- Bug fix: Filenames with only 1 tags being removed when 
-	  adding/removing tags
+        - Bug fix: "Bus Error" on large amount (more new than old) of new
+          files/directory being added got fixed
+        - Bug fix: Filenames with only 1 tags being removed when 
+          adding/removing tags
     - 2018/02/11 (3.0a-05)
         - Source code: Added const to source parameters
         - Source code: All memcpy size determined by string length of source +
-	  1 rather than size of destination
+        1 rather than size of destination
     - 2018/02/08 (3.0a-04)
         - Bug fix: Fix when altering tags numbers puts up an extra line
     - 2018/02/08 (3.0a-03)
         - Bug fix: Array use malloc, no longer segmentation faults on very
-	  large list of files
+        large list of files
     - 2018/02/06 (3.0a-02)
         - Bug fix: A workaround done to handle larger tag files (more than ~6k
-	  files able to handle now) in which previously fails to segmentation
-	  faults
+        files able to handle now) in which previously fails to segmentation
+        faults
         - Bug fix: Categories output not properly done if there's an empty
-	  category in between now fixed, empty categories shown differently now
+        category in between now fixed, empty categories shown differently now
     - 2018/02/01 (3.0a-01)
         - 2.1 versions named properly in changelog and skipped versioning 2.1
-	  for 3.0
-	- Improvements: "categories" command also outputs the amount of files
-	  each tags has, and the total of files under per category. Also has
-	  slightly different formatting.
-	- New feature: Outputs all files available using "sftagger all"
-	- New feature: Outputs all tags (and category per tag) under the 
-	  filenames given using "sftagger show-tags"
+          for 3.0
+        - Improvements: "categories" command also outputs the amount of files
+          each tags has, and the total of files under per category. Also has
+          slightly different formatting.
+        - New feature: Outputs all files available using "sftagger all"
+        - New feature: Outputs all tags (and category per tag) under the 
+          filenames given using "sftagger show-tags"
 - 2.1
     - 2018/01/31 (2.1 RC2)
         - Fixed quick sort not sorting properly when it comes to lower amount
-	  of items
+          of items
     - 2018/01/30 (2.1 RC1)
         - More efficient way of sorting: Changed from bubble sort to quick sort
-	- Source code: Source no longer de-references while nothing need to 
-	  modify to it
+    - Source code: Source no longer de-references while nothing need to 
+      modify to it
 - 2.0
     - 2018/01/10 (2.0 Release)
         - Dots, forward-slashes, dashes, and underscores exempt from as special
-	  characters
-	- Current directory's database tag-file exempt from being added
-	- File/tags-to message change: "New file added:" to "New file/directory
-	  added:"
-	- Bug fix: Tags properly added on rather than having part of the 
-	  filename
-	- Bug fix: Tags that needed to be removed are removed properly without 
-	  also removing other tags after it
-	- Bug fix: Renaming category: Empty category fixed to format properly
-	- Bug fix: Renaming tags: Prevented duplicated tags
-	- Incompatible with 1.0 and 2.0 RC3
+      characters
+    - Current directory's database tag-file exempt from being added
+    - File/tags-to message change: "New file added:" to "New file/directory
+      added:"
+    - Bug fix: Tags properly added on rather than having part of the 
+      filename
+    - Bug fix: Tags that needed to be removed are removed properly without 
+      also removing other tags after it
+    - Bug fix: Renaming category: Empty category fixed to format properly
+    - Bug fix: Renaming tags: Prevented duplicated tags
+    - Incompatible with 1.0 and 2.0 RC3
     - 2018/01/09 (2.0 RC3)
         - Improvement: Filenames with special characters are dealt with 
-	  properly
-	- Bug fix: Usage/Error message fixed to show all commands available
-	- Incompatible with RC2
+          properly
+    - Bug fix: Usage/Error message fixed to show all commands available
+    - Incompatible with RC2
     - 2018/01/06 (2.0 RC2)
         - RC2-1: Fixed Makefile and category to remove not showing up in the 
-	  warning message
+          warning message
         - Source code: Changed all sprintf to snprintf, strcat to strncat, and 
-	  strcpy to memcpy to comply with OpenBSD warnings.
-	- Tag adding more verbose
-	- Bug fix: Tags adding: Fixed numbers not being updated
+          strcpy to memcpy to comply with OpenBSD warnings.
+    - Tag adding more verbose
+    - Bug fix: Tags adding: Fixed numbers not being updated
     - 2018/01/06 (2.0 RC1)
         - New feature: File's tag and file removing
-	- Bug fix: Tags adding: Spaced filenames added properly
-	- New man page included
+    - Bug fix: Tags adding: Spaced filenames added properly
+    - New man page included
     - 2018/01/05 (2.0a-05)
         - New feature: Category removing
     - 2018/01/04 (2.0a-04)
@@ -166,19 +172,19 @@ Changelog
         - New feature: Category and tag renaming
     - 2018/01/02 (2.0a-02)
         - Makefile: Reverted back to cc (GCC for GNU/Linux) rather than 
-	  specifically clang
-	- Bug fix: Tags adding: First tag/tag 0 properly checked upon 
-	  duplication
+      specifically clang
+    - Bug fix: Tags adding: First tag/tag 0 properly checked upon 
+      duplication
     - 2018/01/02 (2.0a-01)
         - Change the way "add tags-to" and "add categories" command works 
-	  (replaces create and update commands)
-	- Update command no longer available
-	- Create command legacy
-	- No longer creates "category: placeholder" on top line
+      (replaces create and update commands)
+    - Update command no longer available
+    - Create command legacy
+    - No longer creates "category: placeholder" on top line
 - 1.0
     - 2017/12/31 (1.0 Release)
         - Bug fix: Searching: Prevented when 0 valid tags given from searching
-	- README changed from md to text format
+        - README changed from md to text format
     - 2017/12/29 (1.0 RC3)
         - Bug fix: Fixed numbers +3 of what they should be
         - Incompatible with RC2
@@ -186,7 +192,7 @@ Changelog
     - 2017/12/28 (1.0 RC2)
         - Bug fix: Tag adding: Fixed numbers not being updated
         - Bug fix: Tag adding: Fixed duplication not checked outside of its 
-	  category
+          category
         - Added: ability to list out of all both categories and tags
     - 2017/12/27 (1.0 RC1)
         - Bug fix: Fixed line not fully cleared
@@ -199,7 +205,7 @@ Changelog
     - 2017/12/26
         - Added: files searching via tags
         - Added: file updating (Only adds new, doesn't remove deleted/
-	  unfounded)
+          unfounded)
     - 2017/12/25
         - Added: tags adding to files and tags duplication checking
     - 2017/12/24

@@ -15,13 +15,19 @@
 #define BUFFER 256
 #define B_BUFFER 2560
 
-#define VERSION "3.0 Release - 2018/03/31"
+#define VERSION "3.1 RC1 - 2018/06/01"
 #define FILETARGET "tags"
 #define FILETARGETTEMP ".temp-" FILETARGET
 
 #define RENAME(x, y) \
 	if (rename(x, y)) \
 		printf("Error: Unable to rename file\n");
+
+#define PCHECK(x, y) \
+	!strcmp(argv[x], y)
+
+#define TCHECK(x, y, z) \
+	!strcmp(argv[x], y) && type == z
 
 enum {
 	CATEGORY, FILES,
@@ -814,14 +820,17 @@ skip_to_linereset_cat:
 	fpt = fopen(FILETARGETTEMP, "r");
 	FILE *fpt2 = fopen(FILETARGETTEMP "-2", "w");
 	mode = CATEGORY;
+	char *lowernfline = (char *) malloc(B_BUFFER);
 	while (fgets(line, B_BUFFER, fpt) != NULL) {
 		if (!strcmp(line, "\n")) {
 			mode = FILES;
 		} else if (mode == FILES) {
 			for (j=nfm; j<nfl; j++) {
-				if (strcmp(nflines[j], line) < 0) {
+				strtolower(lowernfline, nflines[j]);
+				if (strcmp(lowernfline, line) < 0) {
 					fprintf(fpt2, "%s", nflines[j]);
 					nfm++;
+					memset(lowernfline, 0, B_BUFFER);
 				} else {
 					break;
 				}
@@ -830,6 +839,7 @@ skip_to_linereset_cat:
 		fprintf(fpt2, "%s", line);
 		memset(line, 0, sizeof line);
 	}
+	free(lowernfline);
 	/* Leftovers */
 	for (j=nfm; j<nfl; j++)
 		fprintf(fpt2, "%s", nflines[j]);
@@ -1471,23 +1481,23 @@ void usage(void)
 void par2(int argc, char *argv[], int type)
 {
 	if (argc > 2) {
-		if (!strcmp(argv[2], "tags") && type == ADD)
+		if (TCHECK(2, "tags", ADD))
 			ar_tags(argc, argv, ADD_TAGS);
-		else if (!strcmp(argv[2], "category") && type == ADD)
+		else if (TCHECK(2, "category",  ADD))
 			addcategory(argc, argv);
-		else if (!strcmp(argv[2], "tags-to") && type == ADD)
+		else if (TCHECK(2, "tags-to", ADD))
 			ar_tagsfiles(argc, argv, ADD);
-		else if (!strcmp(argv[2], "tag") && type == RENAME)
+		else if (TCHECK(2, "tag", RENAME))
 			rename_tc(argc, argv, "tag");
-		else if (!strcmp(argv[2], "category") && type == RENAME)
+		else if (TCHECK(2, "category", RENAME))
 			rename_tc(argc, argv, "category");
-		else if (!strcmp(argv[2], "tags") && type == REMOVE)
+		else if (TCHECK(2, "tags", REMOVE))
 			ar_tags(argc, argv, RM_TAGS);
-		else if (!strcmp(argv[2], "category") && type == REMOVE)
+		else if (TCHECK(2, "category", REMOVE))
 			ar_tags(argc, argv, RM_CAT);
-		else if (!strcmp(argv[2], "from-tags") && type == REMOVE)
+		else if (TCHECK(2, "from-tags", REMOVE))
 			ar_tagsfiles(argc, argv, REMOVE);
-		else if (!strcmp(argv[2], "files") && type == REMOVE)
+		else if (TCHECK(2, "files", REMOVE))
 			removefiles(argc, argv);
 		else
 			printf("Error: You must give: %s\n",
@@ -1500,27 +1510,27 @@ void par2(int argc, char *argv[], int type)
 int main(int argc, char *argv[])
 {
 	if (argc > 1) {
-		if (!strcmp(argv[1], "read"))
+		if (PCHECK(1, "read"))
 			readfile();
-		else if (!strcmp(argv[1], "version"))
+		else if (PCHECK(1, "version"))
 			printf("%s\n", VERSION);
-		else if (!strcmp(argv[1], "help"))
+		else if (PCHECK(1, "help"))
 			usage();
-		else if (!strcmp(argv[1], "add"))
+		else if (PCHECK(1, "add"))
 			par2(argc, argv, ADD);
-		else if (!strcmp(argv[1], "search"))
+		else if (PCHECK(1, "search"))
 			searchtags(argc, argv);
-		else if (!strcmp(argv[1], "categories"))
+		else if (PCHECK(1, "categories"))
 			listcattags();
-		else if (!strcmp(argv[1], "create"))
+		else if (PCHECK(1, "create"))
 			createfile();
-		else if (!strcmp(argv[1], "rename"))
+		else if (PCHECK(1, "rename"))
 			par2(argc, argv, RENAME);
-		else if (!strcmp(argv[1], "remove"))
+		else if (PCHECK(1, "remove"))
 			par2(argc, argv, REMOVE);
-		else if (!strcmp(argv[1], "all"))
+		else if (PCHECK(1, "all"))
 			outallfiles();
-		else if (!strcmp(argv[1], "show-tags"))
+		else if (PCHECK(1, "show-tags"))
 			filesinfos(argc, argv);
 		else
 			usage();
