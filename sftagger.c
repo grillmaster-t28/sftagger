@@ -15,7 +15,7 @@
 #define BUFFER 256
 #define B_BUFFER 2560
 
-#define VERSION "3.1 RC1 - 2018/06/01"
+#define VERSION "3.1 RC2 - 2018/07/02"
 #define FILETARGET "tags"
 #define FILETARGETTEMP ".temp-" FILETARGET
 
@@ -23,18 +23,13 @@
 	if (rename(x, y)) \
 		printf("Error: Unable to rename file\n");
 
-#define PCHECK(x, y) \
-	!strcmp(argv[x], y)
-
-#define TCHECK(x, y, z) \
-	!strcmp(argv[x], y) && type == z
-
 enum {
 	CATEGORY, FILES,
 	FALSE = 0, TRUE,
 	CAT_NAME = 0, TAG_NAME,
 	ADD = 0, RENAME, REMOVE,
-	ADD_TAGS = 0, RM_TAGS, RM_CAT
+	ADD_TAGS = 0, RM_TAGS, RM_CAT,
+	RN_CAT = 0, RN_TAG
 };
 
 static const char *usage_error[] = {
@@ -42,6 +37,13 @@ static const char *usage_error[] = {
 	"{category | tag}",
 	"{category | tags | from-tags | files}"
 };
+
+typedef struct func_matcher {
+	char *str;
+	char *str2;
+	int (*f)(int, char **, int);
+	int flag;
+} func_matcher;
 
 int specialchar(char c)
 {
@@ -154,7 +156,7 @@ unsigned int countlines(const char filename[])
 }
 
 /* Creates a new tags file */
-int createfile(void)
+int createfile(int argc, char *argv[], int tmp)
 {
 	FILE *fp;	/* File writing */
 	DIR *dp;	/* Directory reading */
@@ -353,7 +355,7 @@ int emptycat(int on[], int from)
 	return 0;
 }
 
-void listcattags(void)
+int listcattags(int argc, char *argv[], int tmp)
 {
 	FILE *fp;
 	char line[B_BUFFER];
@@ -383,7 +385,7 @@ void listcattags(void)
 	fp = fopen(FILETARGET, "r");
 	if (fp == NULL) {
 		printf("File \"tags\" doesn't exit in current directory\n");
-		return;
+		return -1;
 	}
 
 	while (fgets(line, B_BUFFER, fp) != NULL) {
@@ -435,6 +437,8 @@ void listcattags(void)
 		else
 			printf("%s, ", cat[emptycats[i]].name);
 	}
+
+	return 0;
 }
 
 void getchange(int *min, int *addby, int max, char *argv[])
@@ -528,11 +532,11 @@ void rm_rejects(char *src, int limit, char reject[][BUFFER])
 }
 
 /* Add category */
-void addcategory(int argc, char *argv[])
+int addcategory(int argc, char *argv[], int tmp)
 {
 	if (argc <= 3) {
 		printf("Error: You must state the category\n");
-		return;		/* Terminates if no category stated */
+		return -1;		/* Terminates if no category stated */
 	}
 
 	FILE *fp;
@@ -540,9 +544,9 @@ void addcategory(int argc, char *argv[])
 	/* File reading variables */
 	int j, k = 0;
 
-	int file_sig = createfile();
+	int file_sig = createfile(argc, argv, -1);
 	if (file_sig == -2)
-		return;
+		return -2;
 	else if (file_sig == 0) {
 		fp = fopen(FILETARGET, "w");
 		for (j=3; j<argc; j++) {
@@ -551,7 +555,7 @@ void addcategory(int argc, char *argv[])
 		}
 		fprintf(fp, "\n");
 		fclose(fp);
-		return;
+		return -3;
 	}
 
 	FILE *fpt;
@@ -599,6 +603,8 @@ void addcategory(int argc, char *argv[])
 	fclose(fp);
 	fclose(fpt);
 	RENAME(FILETARGETTEMP, FILETARGET);
+
+	return 0;
 }
 
 void filesaddcheck(char line[], char *newline, int tags_amount,
@@ -657,13 +663,13 @@ int filesrmcheck(char *newline, char filenameofline[], int ltagsmax,
 }
 
 /* Add tag(s) to file(s) and remove tag(s) from file(s) */
-void ar_tagsfiles(int argc, char **argv, int type)
+int ar_tagsfiles(int argc, char **argv, int type)
 {
 	if (argc <= 3) {
 		printf("Error: You must state at least one filename\n");
-		return;
+		return -1;
 	} else if (!(checkifexist(FILETARGET)))
-		return;
+		return -2;
 	
 	/* Let UNIX/UNIX-like system handle the wildcards */
 
@@ -727,11 +733,11 @@ void ar_tagsfiles(int argc, char **argv, int type)
 	tags_amount = gettags_wfilt(tagsnums, tagstoadd, g);
 	if (tags_amount == -1) {		/* Read error */
 		printf("Error: Fail reading file\n");
-		return;
+		return -3;
 	} else if (tags_amount == 0) {		/* No valid tags error */
 		printf("Error: No valid tags, add them in before you apply"
 				" them\n");
-		return;
+		return -4;
 	}
 
 	fp = fopen(FILETARGET, "r");
@@ -850,17 +856,19 @@ skip_to_linereset_cat:
 skip_to_filetags_filewrite:
 	free(filesfound);
 	RENAME(FILETARGETTEMP, FILETARGET);
+
+	return 0;
 }
 
 /* Remove specified files from the list */
-void removefiles(int argc, char *argv[])
+int removefiles(int argc, char *argv[], int tmp)
 {
 	if (argc <= 3) {
 		printf("Error: You must state at least one filename to"
 				" remove\n");
-		return;
+		return -1;
 	} else if (!(checkifexist(FILETARGET)))
-		return;
+		return -2;
 
 	FILE *fp;
 	FILE *fpt;
@@ -900,9 +908,11 @@ removefiles_linereset:
 	fclose(fp);
 	fclose(fpt);
 	RENAME(FILETARGETTEMP, FILETARGET);
+
+	return 0;
 }
 
-void outallfiles(void)
+int outallfiles(int argc, char *argv[], int tmp)
 {
 	FILE *fp;
 
@@ -912,7 +922,7 @@ void outallfiles(void)
 	int mode = CATEGORY;
 
 	if (!(checkifexist(FILETARGET)))
-		return;
+		return -1;
 
 	fp = fopen(FILETARGET, "r");
 	while (fgets(line, B_BUFFER, fp) != NULL) {
@@ -927,9 +937,10 @@ void outallfiles(void)
 	fclose(fp);
 
 	putchar('\n');
+	return 0;
 }
 
-void filesinfos(int argc, char *argv[])
+int filesinfos(int argc, char *argv[], int tmp)
 {
 	FILE *fp;
 
@@ -957,9 +968,9 @@ void filesinfos(int argc, char *argv[])
 
 	if (argc <= 2) {
 		printf("Error: You must state at least one file\n");
-		return;
+		return -1;
 	} else if (!(checkifexist(FILETARGET)))
-		return;
+		return -2;
 
 	fp = fopen(FILETARGET, "r");
 	while (fgets(line, B_BUFFER, fp) != NULL) {
@@ -1007,9 +1018,10 @@ void filesinfos(int argc, char *argv[])
 	fclose(fp);
 	if (!filesfound) {
 		printf("Notice: No files found with the files given\n");
-		return;
+		return -3;
 	}
 
+	return 0;
 }
 
 int linematchtags(char linetags[B_BUFFER][BUFFER], int ltagstotal,
@@ -1031,7 +1043,7 @@ int linematchtags(char linetags[B_BUFFER][BUFFER], int ltagstotal,
 	return filematches;
 }
 
-void searchtags(int argc, char *argv[])
+int searchtags(int argc, char *argv[], int tmp)
 {
 	FILE *fp;
 
@@ -1052,9 +1064,9 @@ void searchtags(int argc, char *argv[])
 
 	if (argc <= 2) {
 		printf("Error: You must state at least one tag\n");
-		return;
+		return -1;
 	} else if (!(checkifexist(FILETARGET)))
-		return;
+		return -2;
 
 	for (i=0; i<argc-2; i++)
 		memcpy(ftagsnames[i], argv[i+2], strlen(argv[i+2]) + 1);
@@ -1062,7 +1074,7 @@ void searchtags(int argc, char *argv[])
 	maxtags = gettags_wfilt(ftagsnums, ftagsnames, argc-2);
 	if (maxtags == 0) {
 		printf("Error: No valid tag given\n");
-		return;
+		return -3;
 	}
 
 	fp = fopen(FILETARGET, "r");
@@ -1085,20 +1097,22 @@ void searchtags(int argc, char *argv[])
 	if (!found)
 		printf("Notice: No files found with the tags given");
 	putchar('\n');
+
+	return 0;
 }
 
 /* Add/Remove tags */
-void ar_tags(int argc, char *argv[], int type)
+int ar_tags(int argc, char *argv[], int type)
 {
 	if (argc <= 4 && type != RM_CAT) {
 		printf("Error: You must state at least one tag and a"
 				" category\n");
-		return;
+		return -1;
 	} else if (argc != 4 && type == RM_CAT) {
 		printf("Error: You must state one category\n");
-		return;
+		return -2;
 	} else if (!(checkifexist(FILETARGET)))
-		return;
+		return -3;
 
 	if (type == RM_CAT) {	/* Set warning for remove category command */
 		printf("CAUTION: You're going to remove the category:"
@@ -1113,7 +1127,7 @@ void ar_tags(int argc, char *argv[], int type)
 		while (c != '\n')
 			c = getchar();
 		if (ans != 'Y')
-			return;
+			return -4;
 	}
 
 	FILE *fp;
@@ -1338,10 +1352,12 @@ void ar_tags(int argc, char *argv[], int type)
 
 	if (validcategory == 0) {
 		printf("The category provided isn't valid\n");
-		return; 
+		return -5; 
 	}
 
 	RENAME(FILETARGETTEMP, FILETARGET);
+
+	return 0;
 }
 
 /* Returns string after colon */
@@ -1358,17 +1374,30 @@ char *afterdd_strreturn(const char src[])
 }
 
 /* Renames tag or category */
-void rename_tc(int argc, char *argv[], char *str_rntype)
+int rename_tc(int argc, char *argv[], int rntype)
 {
+	char *str_rntype;
+
+	if (rntype == 0) {
+		str_rntype = "category";
+	} else if (rntype == 1) {
+		str_rntype = "tag";
+	} else {
+		str_rntype = "ERROR UNFOUND";
+	}
+
 	if (argc != 5) {
 		printf("Error: You must state only one replacement name and"
 				" only one current %s name\n", str_rntype);
-		return;
+		return -1;
 	} else if (!(checkifexist(FILETARGET)))
-		return;
+		return -2;
 	else if (!strcmp(argv[3], argv[4])) {
 		printf("Error: Replacement name the same as original name\n");
-		return;
+		return -3;
+	} else if (rntype != 0 && rntype != 1) {
+		printf("FATAL ERROR: RNTYPE UNFOUND\n");
+		return -4;
 	}
 
 	FILE *fp;
@@ -1380,7 +1409,7 @@ void rename_tc(int argc, char *argv[], char *str_rntype)
 	char strcompare[B_BUFFER];
 	int renamed = 0;
 	int ltagsmax = 0, j;
-	int rntype = !(strcmp(str_rntype, "category")) ? CAT_NAME : TAG_NAME;
+	// int rntype = !(strcmp(str_rntype, "category")) ? CAT_NAME : TAG_NAME;
 	char linetags[B_BUFFER][BUFFER];
 	char temptag[B_BUFFER];
 	int dup = 0;
@@ -1444,15 +1473,17 @@ void rename_tc(int argc, char *argv[], char *str_rntype)
 
 	if (!renamed || dup) {
 		printf("Error: Failed to rename from \"%s\" to \"%s\" due to"
-				" attempt duplication or tag not found\n", 
-				argv[4], argv[3]);
-		return;
+				" attempt duplication or %s not found\n", 
+				argv[4], argv[3], str_rntype);
+		return -4;
 	}
 
 	RENAME(FILETARGETTEMP, FILETARGET);
+
+	return 0;
 }
 
-void readfile(void)
+int readfile(int argc, char *argv[], int tmp)
 {
 	FILE *fp;
 	char line[B_BUFFER];
@@ -1460,82 +1491,69 @@ void readfile(void)
 	if ((fp = fopen(FILETARGET, "r")) == NULL) {
 		printf("File \"%s\" doesn't exit in current directory\n", 
 				FILETARGET);
-		return;
+		return -1;
 	}
 	while (fgets(line, B_BUFFER, fp) != NULL) {
 		printf("%s", line);
 		memset(line, 0, sizeof line);
 	}
 	fclose(fp);
+
+	return 0;
 }
 
-void usage(void)
+int usage(int argc, char *argv[], int tmp)
 {
 	printf("usage: {create | read | version | help | search | all |"
 			" categories | show-tags | add %s | rename %s |"
 			" remove %s}\n",
 			usage_error[ADD], usage_error[RENAME],
 			usage_error[REMOVE]);
+	return 0;
 }
 
-void par2(int argc, char *argv[], int type)
+int printversion(int argc, char *argv[], int tmp)
 {
-	if (argc > 2) {
-		if (TCHECK(2, "tags", ADD))
-			ar_tags(argc, argv, ADD_TAGS);
-		else if (TCHECK(2, "category",  ADD))
-			addcategory(argc, argv);
-		else if (TCHECK(2, "tags-to", ADD))
-			ar_tagsfiles(argc, argv, ADD);
-		else if (TCHECK(2, "tag", RENAME))
-			rename_tc(argc, argv, "tag");
-		else if (TCHECK(2, "category", RENAME))
-			rename_tc(argc, argv, "category");
-		else if (TCHECK(2, "tags", REMOVE))
-			ar_tags(argc, argv, RM_TAGS);
-		else if (TCHECK(2, "category", REMOVE))
-			ar_tags(argc, argv, RM_CAT);
-		else if (TCHECK(2, "from-tags", REMOVE))
-			ar_tagsfiles(argc, argv, REMOVE);
-		else if (TCHECK(2, "files", REMOVE))
-			removefiles(argc, argv);
-		else
-			printf("Error: You must give: %s\n",
-					usage_error[type]);
-	} else
-		printf("Error: You must give at least one parameter:"
-				" %s\n", usage_error[type]);
+	printf("%s\n", VERSION);
+	return 0;
 }
 
 int main(int argc, char *argv[])
 {
-	if (argc > 1) {
-		if (PCHECK(1, "read"))
-			readfile();
-		else if (PCHECK(1, "version"))
-			printf("%s\n", VERSION);
-		else if (PCHECK(1, "help"))
-			usage();
-		else if (PCHECK(1, "add"))
-			par2(argc, argv, ADD);
-		else if (PCHECK(1, "search"))
-			searchtags(argc, argv);
-		else if (PCHECK(1, "categories"))
-			listcattags();
-		else if (PCHECK(1, "create"))
-			createfile();
-		else if (PCHECK(1, "rename"))
-			par2(argc, argv, RENAME);
-		else if (PCHECK(1, "remove"))
-			par2(argc, argv, REMOVE);
-		else if (PCHECK(1, "all"))
-			outallfiles();
-		else if (PCHECK(1, "show-tags"))
-			filesinfos(argc, argv);
-		else
-			usage();
-	} else
-		usage();
-	return 0;
+	if (argc == 1) {
+		goto main_end;
+	}
+
+	func_matcher *funcs = (func_matcher []) {
+		{"read", 	NULL,		&readfile, 	-1},
+		{"version", 	NULL,		&printversion, 	-1},
+		{"help", 	NULL,		&usage, 	-1},
+		{"search", 	NULL,		&searchtags, 	-1},
+		{"categories", 	NULL,		&listcattags, 	-1},
+		{"create", 	NULL,		&createfile, 	-1},
+		{"all", 	NULL,		&outallfiles, 	-1}, 
+		{"show-tags", 	NULL,		&filesinfos, 	-1},
+		{"add", 	"tags",		&ar_tags, 	ADD_TAGS},
+		{"add", 	"category",	&addcategory,	-1},
+		{"add", 	"tags-to",	&ar_tagsfiles, 	ADD},
+		{"rename", 	"tag",		&rename_tc, 	RN_TAG},
+		{"rename", 	"category",	&rename_tc, 	RN_CAT},
+		{"remove", 	"tags",		&ar_tags, 	RM_TAGS},
+		{"remove", 	"category",	&ar_tags, 	RM_CAT},
+		{"remove", 	"from-tags",	&ar_tagsfiles, 	REMOVE},
+		{"remove", 	"files",	&removefiles, 	-1},
+		{NULL, 		NULL, 		NULL,		-2}
+	};
+	func_matcher *ptr = funcs;
+
+	for (; ptr->str != NULL; ptr++) {
+		if (!strcmp(ptr->str, argv[1]) && (ptr->str2 == NULL ||
+					!strcmp(ptr->str2, argv[2]))) {
+			return (*ptr->f)(argc, argv, ptr->flag);
+		}
+	}
+
+main_end:
+	return usage(argc, argv, -1);
 }
 
