@@ -15,7 +15,7 @@
 #define BUFFER 256
 #define B_BUFFER 2560
 
-#define VERSION "3.1 RC2 - 2018/07/02"
+#define VERSION "3.1 RC3 - 2018/07/02"
 #define FILETARGET "tags"
 #define FILETARGETTEMP ".temp-" FILETARGET
 
@@ -32,10 +32,16 @@ enum {
 	RN_CAT = 0, RN_TAG
 };
 
-static const char *usage_error[] = {
-	"{category | tags | tags-to}",
-	"{category | tag}",
-	"{category | tags | from-tags | files}"
+typedef struct usage_error_struct {
+	char *str;
+	char *type;
+} usage_error_struct;
+
+usage_error_struct *usage_error = (usage_error_struct []) {
+	{"{category | tags | tags-to}", "add"},
+	{"{category | tag}", "rename"},
+	{"{category | tags | from-tags | files}", "remove"},
+	{NULL, NULL}
 };
 
 typedef struct func_matcher {
@@ -1507,8 +1513,8 @@ int usage(int argc, char *argv[], int tmp)
 	printf("usage: {create | read | version | help | search | all |"
 			" categories | show-tags | add %s | rename %s |"
 			" remove %s}\n",
-			usage_error[ADD], usage_error[RENAME],
-			usage_error[REMOVE]);
+			usage_error[ADD].str, usage_error[RENAME].str,
+			usage_error[REMOVE].str);
 	return 0;
 }
 
@@ -1518,13 +1524,28 @@ int printversion(int argc, char *argv[], int tmp)
 	return 0;
 }
 
-int main(int argc, char *argv[])
+int errorhandle(int argc, char *argv[])
 {
-	if (argc == 1) {
-		goto main_end;
+	usage_error_struct *ptr = usage_error;
+
+	/* Prints out the suitable error if the 1st param is known, otherwise
+	 * just returns the usage function
+	 */
+	for (; ptr->type != NULL; ptr++) {
+		if (!strcmp(ptr->type, argv[1])) {
+			return (printf("Error: You must give at least one"
+					" parameter: %s\n", ptr->str) > 0)
+					? 0 : -1;
+		}
 	}
 
+	return usage(argc, argv, -1);
+}
+
+int main(int argc, char *argv[])
+{
 	func_matcher *funcs = (func_matcher []) {
+		/* 1st param,	2nd param,	function,	flag */
 		{"read", 	NULL,		&readfile, 	-1},
 		{"version", 	NULL,		&printversion, 	-1},
 		{"help", 	NULL,		&usage, 	-1},
@@ -1544,16 +1565,24 @@ int main(int argc, char *argv[])
 		{"remove", 	"files",	&removefiles, 	-1},
 		{NULL, 		NULL, 		NULL,		-2}
 	};
+
+	/* Pointer variable of the function matcher */
 	func_matcher *ptr = funcs;
 
-	for (; ptr->str != NULL; ptr++) {
+	/* Looping and matching through parameters to its function
+	 *
+	 * NOTE:
+	 * "argc > 2" prevents SegFault if 1st param has a non-NULL
+	 * 2nd param but 2nd param isn't put in
+	 */
+	for (; ptr->str != NULL && argc > 1; ptr++) {
 		if (!strcmp(ptr->str, argv[1]) && (ptr->str2 == NULL ||
-					!strcmp(ptr->str2, argv[2]))) {
+				(argc > 2 && !strcmp(ptr->str2, argv[2])))) {
 			return (*ptr->f)(argc, argv, ptr->flag);
 		}
 	}
 
-main_end:
-	return usage(argc, argv, -1);
+	/* Prints usage/error if command not found/complete */
+	return (argc > 1) ? errorhandle(argc, argv) : usage(argc, argv, -1);
 }
 

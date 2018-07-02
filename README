@@ -3,7 +3,7 @@ sftagger - simple file tagging tool
 sftagger is a simple file tagging tool written in C
 
 Current Stable Version: 2018/03/31 (3.0 Release)
-Development Version: 2018/07/02 (3.1 RC2)
+Development Version: 2018/07/02 (3.1 RC3)
 
 Always use the stable version over the development version as development 
 version are prone to breaking your "tags" file.
@@ -86,6 +86,10 @@ TODO (For future releases)
 Changelog
 ---------
 - 3.1
+    - 2018/07/02 (3.1 RC3)
+        - "sftagger add/rename/remove" doesn't segmentation fault anymore
+        - Additional error message
+        - More comments
     - 2018/07/02 (3.1 RC2)
         - Array of struct with function pointer to a function as a solution to
           if/else on parameter matching (in main function)
