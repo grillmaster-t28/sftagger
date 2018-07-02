@@ -86,7 +86,7 @@ TODO (For future releases)
 Changelog
 ---------
 - 3.1
-    - 2018/07/01 (3.1 RC2)
+    - 2018/07/02 (3.1 RC2)
         - Array of struct with function pointer to a function as a solution to
           if/else on parameter matching (in main function)
             - Thanks to: Xunie for advising this solution
