@@ -3,7 +3,7 @@ sftagger - simple file tagging tool
 sftagger is a simple file tagging tool written in C
 
 Current Stable Version: 2018/03/31 (3.0 Release)
-Development Version: 2018/07/02 (3.1 RC3)
+Development Version: 2019-01-18 (4.0-a01)
 
 Always use the stable version over the development version as development 
 version are prone to breaking your "tags" file.
@@ -17,36 +17,11 @@ Enter the following command to build and install sftagger
 
 Usage
 -----
-- add category - Make new category/categories and creates a new tags file if it
-                 doesn't exists
-- add tags - Make new tags append to a category
-    - EX: "add tags small big size" - "small big" are the tags, "size" are the 
-          category
-- add tags-to - Appends tags to the files given
-    - EX: "add tags-to *.png"
-      - Prompt: "arts plain" - adds the tags "arts" and "plain" to the files 
-                               that has ".png" in the suffix
-- categories - Lists all categories and tags
-- all - Prints out all files available, used like search function but for all
-- rename category - Rename the category specified
-    - EX: "rename category bar foo" - replaces category "foo" with "bar"
-- rename tag - Rename the tag specified
-    - EX: "rename tag bar foo" - replaces tag "foo" with "bar"
-- remove category - Removes the category specified (only one allowed and a 
-                    warning follows after the command entered)
-    - EX: "remove category bread_type" - removes category "bread_type"
-- remove tags - Removes the tags specified
-    - EX: "remove tags white brown" - removes tags "white" and "brown"
-- remove from-tags - Removes the tags from the files specified
-    - EX: "remove from-tags bread_01.jpg bread_02.jpg"
-      - Prompt: "bread" - removes the tag "bread" from the files "bread_01.jpg"
-                          and "bread_02.jpg"
-- remove files - Removes the files from the list
-    - EX: "remove files not_bread_01.jpg not_bread_02.png" - removes the files
-                  "not_bread_01.jpg" and "not_bread_02.png" from the list
-- read - outputs entire file of tags
-- version - outputs the current version
-- help - outputs the usage commands
+- See manpage
+
+Depreciated commands (by 4.0)
+-----------------------------
+- All of them, now the commands are just using characters
 
 Depreciated commands (by 2.0)
 -----------------------------
@@ -67,6 +42,7 @@ with your program of choice
 Dependencies
 ------------
 - libc (recommend: C99 and POSIX >= 200809)
+- [sqlite3](https://www.sqlite.org/index.html)
 
 Tested on
 ---------
@@ -85,6 +61,11 @@ TODO (For future releases)
 
 Changelog
 ---------
+- 4.0
+    - 2019-01-18 (4.0-a01)
+        - complete sftagger rework
+            - sqlite3 instead of flat files
+            - arguments options changed to a more UNIX-like format
 - 3.1
     - 2018/07/02 (3.1 RC3)
         - "sftagger add/rename/remove" doesn't segmentation fault anymore

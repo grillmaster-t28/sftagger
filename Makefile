@@ -3,13 +3,14 @@
 NAME = sftagger
 SRC = sftagger.c
 CC = cc
-VERSION = 3.1-RC3
+VERSION = 4.0-a01
 PREFIX = /usr/local
 MANPREFIX = ${PREFIX}/share/man
-CFLAGS = -std=c99 -pedantic -Wall -Os
+CFLAGS = -std=c11 -pedantic -Wall -O3 -l sqlite3
 
 ${NAME}: ${NAME}.c
 	@${CC} -o ${NAME} ${CFLAGS} ${SRC}
+	@strip -R .note -R .comment -R .eh_frame -R .eh_frame_hdr -s ${NAME}
 
 clean:
 	@echo cleaning
