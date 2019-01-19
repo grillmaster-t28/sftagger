@@ -37,6 +37,31 @@
 	if (rename(x, y)) \
 		printf("Error: Unable to rename file\n");
 
+// Typenames
+enum typename_e {
+	TYPENAME_OTHER,
+	TYPENAME_VOID_PTR,
+	TYPENAME_CHAR_PTR,
+	TYPENAME_CHAR,
+	TYPENAME_INT,
+	TYPENAME_UINT,
+	TYPENAME_LINT,
+	TYPENAME_FLOAT,
+	TYPENAME_DOUBLE
+};
+
+// C11 Generics
+#define typename(x) _Generic((x),\
+	void *:		TYPENAME_VOID_PTR,	\
+	char *:		TYPENAME_CHAR_PTR,	\
+	char:		TYPENAME_CHAR,		\
+	int:		TYPENAME_INT,		\
+	unsigned int:	TYPENAME_UINT,		\
+	long int:	TYPENAME_LINT,		\
+	float:		TYPENAME_FLOAT,		\
+	double:		TYPENAME_DOUBLE,	\
+	default:	TYPENAME_OTHER		)
+
 // enum declarations
 typedef enum action_enum {
 	HELP, RET_VERSION, NEW, READ, SEARCH, ALL, INSERT, RENAME
@@ -44,7 +69,7 @@ typedef enum action_enum {
 } e_action;
 
 typedef enum action_type_enum {
-	CATEGORY, TAG, TAGFILE, FILENAME
+	NONE, CATEGORY, TAG, TAGFILE, FILENAME
 } e_action_type;
 
 // structs declarations
@@ -66,27 +91,23 @@ typedef struct options_struct {
  *
  */
 static int
-sql_callback(void *not_used, int argc, char **argv, char **az_colname)
+sql_callback(void *dataset, int argc, char **argv, char **az_colname)
 {
 	for (int i=0; i < argc; ++i) {
-		printf("%s = %s\n", az_colname[i], argv[i] ? argv[i] : "NULL");
+		if (!strcmp(az_colname[i], "name")) {
+			if (typename(dataset) == TYPENAME_CHAR_PTR) {
+				sprintf(dataset, "%s%s "
+						, strdup(dataset)
+						, argv[i] ? argv[i] : "NULL");
+			} else {
+				fprintf(stdout, "%s "
+						, argv[i] ? argv[i] : "NULL");
+			}
+		}
 	}
-	putchar('\n');
-
-	return 0;
-}
-
-/* SQL sqlite3 SELECT callback function
- *
- */
-static int
-sql_select(void *data, int argc, char **argv, char **az_colname)
-{
-	fprintf(stderr, "%s: ", (const char *) data);
-	for (int i=0; i < argc; ++i) {
-		printf("%s = %s\n", az_colname[i], argv[i] ? argv[i] : "NULL");
+	if (typename(dataset) != TYPENAME_CHAR_PTR) {
+		putchar('\n');
 	}
-	putchar('\n');
 
 	return 0;
 }
@@ -109,7 +130,6 @@ sql_open(const char *filename, sqlite3 **db)
 		sqlite3_close(*db);
 		return (OPERATION_FAILURE);
 	} else {
-		fprintf(stdout, "Databased opened\n");
 		return (OPERATION_SUCCESS);
 	}
 }
@@ -132,11 +152,11 @@ sql_exec(	sqlite3 *db,
 
 	// Execute status message
 	if (rc != SQLITE_OK) {
-		fprintf(stderr, "SQL error: %s\n", *z_errmsg);
+		fprintf(stderr, "\nSQL error: %s\n", *z_errmsg);
 		sqlite3_free(*z_errmsg);
 		return (OPERATION_FAILURE);
 	} else {
-		fprintf(stdout, "SQL executed\n");
+		fprintf(stdout, "\n");
 		return (OPERATION_SUCCESS);
 	}
 }
@@ -157,19 +177,27 @@ sql_create_tables(void)
 		"CREATE TABLE files("
 		"  id		INTEGER PRIMARY KEY	NOT NULL"
 		", filename	TEXT			NOT NULL"
-		", tags_id	INTEGER"
-		", FOREIGN KEY(tags_id)	REFERENCES tags(id)"
 		");"	// categories tables
 		"CREATE TABLE categories("
 		"  id		INTEGER PRIMARY KEY	NOT NULL"
 		", name		TEXT			NOT NULL"
-		", tags_id	INTEGER"
-		", FOREIGN KEY(tags_id)	REFERENCES tags(id)"
+		");"	// tags-files tables
+		"CREATE TABLE tags_files("
+		"  tags_id	INTEGER			NOT NULL"
+		", files_id	INTEGER			NOT NULL"
+		", FOREIGN KEY(tags_id)		REFERENCES tags(id)"
+		", FOREIGN KEY(files_id)	REFERENCES files(id)"
+		");"	// tags-categories tables
+		"CREATE TABLE tags_categories("
+		"  tags_id		INTEGER		NOT NULL"
+		", categories_id	INTEGER		NOT NULL"
+		", FOREIGN KEY(tags_id)		REFERENCES tags(id)"
+		", FOREIGN KEY(categories_id)	REFERENCES categories(id)"
 		");"
 		;
 }
 
-int
+static int
 help_msg(void)
 {
 	// Prints help message
@@ -181,18 +209,22 @@ help_msg(void)
 		"\n"
 		"Options:\n"
 		"  -n,\tmake a new tag file\n"
-		"  -r,\tread the tag file\n"
+		"  -r,\tread the tag file {T,C,F}\n"
 		"  -s,\tsearch tag(s)\n"
 		"  -a,\treturn all files\n"
 		"  -x,\tprogram to execute\n"
-		"  -i,\tinsert {t,c,r,f}\n"
+		"  -i,\tinsert {t,c,z,f}\n"
 		"  -e,\trename {t,c}\n"
-		"  -d,\tdelete {t,c,r,f}\n"
-		"\n"
-		"  -c,\tcategory\n"
-		"  -t,\ttag\n"
-		"  -z,\ttag-filename\n"
-		"  -f,\tfilename\n"
+		"  -d,\tdelete {t,c,z,f}\n"
+		"\n  Requires argument:\n"
+		"    -c,\tcategory\t(with insert/rename/delete option)\n"
+		"    -t,\ttag\t\t(with insert/rename/delete option)\n"
+		"    -z,\ttag-filename\t(with insert/rename/delete option)\n"
+		"    -f,\tfilename\t(with insert/rename/delete option)\n"
+		"\n  Doesn't require argument:\n"
+		"    -C,\tcategory\t(with read option)\n"
+		"    -T,\ttag\t\t(with read option)\n"
+		"    -F,\tfilename\t(with read option)\n"
 		"\n"
 		"  -h,\tdisplay this help\n"
 		"  -v,\tdisplay version\n"
@@ -200,10 +232,10 @@ help_msg(void)
 		"For more details see sftagger(1).\n"
 		);
 
-	return (EXIT_SUCCESS);
+	return (OPERATION_SUCCESS);
 }
 
-int
+static int
 version(void)
 {
 	// Prints version
@@ -214,7 +246,8 @@ version(void)
 int
 sql_action(	s_args args,
 		const char *sql,
-		int (*callback)(void *, int, char **, char **)
+		int (*callback)(void *, int, char **, char **),
+		void *data
 		)
 {
 	sqlite3		*db;
@@ -226,7 +259,7 @@ sql_action(	s_args args,
 	}
 
 	// Execute SQL statement
-	sql_exec(db, sql, callback, 0, &z_errmsg);
+	sql_exec(db, sql, callback, data, &z_errmsg);
 
 	// Close SQL database
 	sqlite3_close(db);
@@ -240,27 +273,32 @@ sql_action(	s_args args,
 static int
 create_file(s_args args)
 {
-	return sql_action(args, sql_create_tables(), sql_callback);
+	return sql_action(args, sql_create_tables(), sql_callback, NULL);
 }
 
 int
 read_file(s_args args)
 {
+	char	type[BUF_S];
+	char	sql[BUF_M];
+	char	*output = (char *) malloc(sizeof(char) * BUF_L);
+
 	switch (args.type) {
-	case CATEGORY:
-		return sql_action(args, "SELECT * from categories",
-				sql_select);
-	case TAG:
-		return sql_action(args, "SELECT * from tags", sql_select);
-	case FILENAME:
-		return sql_action(args, "SELECT * from files", sql_select);
+	case CATEGORY:	strcpy(type, "categories");	break;
+	case TAG:	strcpy(type, "tags");		break;
+	case FILENAME:	strcpy(type, "files");		break;
 	case TAGFILE:
 		fprintf(stderr, "Tag-file not a printable type\n");
-	default:
-		return sql_action(args,
-				"SELECT * from categories, tags, files",
-				sql_select);
+		return (OPERATION_FAILURE);
+	default:	strcpy(type, "categories, tags, files"); break;
 	}
+
+	// Execute SQL SELECT statement
+	sprintf(sql, "SELECT * from %s", type);
+	sql_action(args, sql, sql_callback, output);
+	printf("%s\n", output);
+
+	return (OPERATION_SUCCESS);
 }
 
 int
@@ -275,38 +313,71 @@ all(s_args args)
 	return (OPERATION_SUCCESS);
 }
 
+// TODO
 int
 action_insert(s_args args)
 {
-	char	*sql = NULL;
-	//args.arg;	// TODO
+	char		*sql;
+	char		*str = NULL;
+	const char	*delim = " ";
+	char		type[BUF_S];
+	int		strflag = 0;
 
-	for (int i=0; i < 0; ++i) {
-		switch (args.type) {
-		case CATEGORY:
-			sql = 	"INSERT INTO categories(id, name)"
-				"VALUES (1, %s);";
-		case TAG:
-			sql =	"INSERT INTO tags(id, name)"
-				"VALUES (1, %s);";
-		case FILENAME:
-			sql =	"INSERT INTO files(id, name)"
-				"VALUES (1, %s);";
-		case TAGFILE:
-			fprintf(stderr, "Tag-file not a printable type\n");
-			return help_msg();
-		default:
-			fprintf(stderr, "No insert type defined");
-			return help_msg();
-		}
-
-		if (sql_action(args, sql, sql_select) == OPERATION_FAILURE) {
-			return OPERATION_FAILURE;
-		}
+	if (!strcmp(args.arg, "")) {
+		// Error occurred: No arguments given
+		fprintf(stderr, "Error: No arguments given\n");
+		return (OPERATION_FAILURE);
+	} else {	
+		// No error occurred
+		sql = (char *) malloc(sizeof(char) * 
+				(BUF_L + strlen(args.arg)));
 	}
 
-	fprintf(stdout, "Operation completed\n");
-	return OPERATION_SUCCESS;
+#ifdef DEBUG
+	if (args.arg != NULL) {
+		printf("args.arg = '%s'\n", args.arg);
+	}
+#endif
+
+	// Go through the arguments given
+	while ((str = strsep(&args.arg, delim)) != NULL) {
+		switch (args.type) {
+		case CATEGORY:	strcpy(type, "categories");	break;
+		case TAG:	strcpy(type, "tags");		break;
+		case FILENAME:	strcpy(type, "files");		break;
+		case TAGFILE:	// Error: Type not for inserting
+			fprintf(stderr, "Tag-file not a printable type\n");
+			free(sql);
+			return help_msg();
+		case NONE:
+		default:	// Error: Unknown type
+			fprintf(stderr, "No insert type defined\n");
+			free(sql);
+			return help_msg();
+		}
+
+		sprintf(sql, "%sINSERT INTO %s(name) VALUES (\"%s\");"
+				, strdup(sql), type, str);
+		++strflag;
+	}
+
+	if (strflag > 0) {
+#ifdef DEBUG
+		printf("sql: %s\n", sql);
+#endif
+
+		if (sql_action(args, sql, sql_callback, NULL) == OPERATION_FAILURE) {
+			free(sql);
+			return (OPERATION_FAILURE);
+		}
+
+		free(sql);
+		return (OPERATION_SUCCESS);
+	} else {
+		fprintf(stderr, "Error: No insert type defined\n");
+		free(sql);
+		return (OPERATION_FAILURE);
+	}
 }
 
 int
@@ -336,14 +407,17 @@ main(int argc, char **argv)
 	s_opt		opts;			// Option used
 
 	// Default options
+	opts.args.type = NONE;			// Type: None
 	opts.args.search_execute = 0;		// Search execute flag: 0
 	opts.action = HELP;			// Action: Help message
 	opts.args.db_filename = FILETARGET;	// Filename: FILETARGET
 	opts.func = &dummy;			// Function: dummy function
 
 	// Parse CLI arguments
-	while ((opt = getopt(argc, argv, "hvnrsaiedx:c::t::z:f::")) != -1) {
+	while ((opt = getopt(argc, argv, "hvnrsaiedx:Cc:Tt:z:Ff:")) != -1) {
+		printf("opt: '%c'\toptopt: '%c'\n", opt, optopt);
 		switch (opt) {
+		// Action cases
 		case 'h': opts.action = HELP;		break;
 		case 'v': opts.action = RET_VERSION;	break;
 		case 'n': opts.action = NEW;		break;
@@ -353,26 +427,28 @@ main(int argc, char **argv)
 		case 'i': opts.action = INSERT;		break;
 		case 'e': opts.action = RENAME;		break;
 		case 'd': opts.action = DELETE;		break;
-		// xctzf options to fall through to set optarg
-		case 'x':
-			opts.args.search_execute = 1;
-			opts.args.arg	= optarg;	break;
-		case 'c':
-			opts.args.type	= CATEGORY;
-			opts.args.arg	= optarg;	break;
-		case 't':
-			opts.args.type	= TAG;
-			opts.args.arg	= optarg;	break;
-		case 'z':
-			opts.args.type	= TAGFILE;
-			opts.args.arg	= optarg;	break;
-		case 'f':
-			opts.args.type	= FILENAME;
-			opts.args.arg	= optarg;	break;
-		default:	// Error message
-			fprintf(stderr, "Error: Argument '%c' not found\n",
-					opt);
+		// Non action cases
+		case 'x':		opts.args.search_execute = 1; 	break;
+		case 'c': case 'C': 	opts.args.type = CATEGORY;	break;
+		case 't': case 'T': 	opts.args.type = TAG;		break;
+		case 'z': 	    	opts.args.type = TAGFILE;	break;
+		case 'f': case 'F': 	opts.args.type = FILENAME;	break;
+		case '?':	// Error message
+			fprintf(stderr, "Error: Argument '%c' not"
+					" found\n",
+					optopt);
 			return help_msg();
+		}
+
+		// xctzf to set optarg
+		switch (opt) {
+		case 'x': case 'c': case 't': case 'z': case 'f':
+#ifdef DEBUG
+			printf("optarg: %s\n", optarg);
+#endif
+			opts.args.arg	= optarg;	break;
+		case 'C': case 'T': case 'F':
+			opts.args.arg	= "";
 		}
 
 		// Return early if just a message required
@@ -389,9 +465,13 @@ main(int argc, char **argv)
 	}
 
 	// Non-parsed/extra arguments
-	opts.args.outer = (char **) calloc(BUF_M, sizeof(char) * NAME_MAX);
+	opts.args.outer = (char **) malloc(sizeof(char *) * BUF_M);
 	for (int i=0; optind < argc; ++i, ++optind) {
+		opts.args.outer[i] = (char *) malloc(sizeof(char) * NAME_MAX);
 		strcpy(opts.args.outer[i], argv[optind]);
+#ifdef DEBUG
+		printf("opts.args.outer[%d]: '%s'\n", i, opts.args.outer[i]);
+#endif
 	}
 
 	// Set function to be used
@@ -406,7 +486,11 @@ main(int argc, char **argv)
 	default:	// Error message
 		fprintf(stderr, "Error: Action not found\n");
 	}
-	
+
+	if (opts.args.arg == NULL) {
+		opts.args.arg = "";
+	}
+
 	// Use operation's function
 	if (opts.func(opts.args) == OPERATION_FAILURE) {
 		free(opts.args.outer);

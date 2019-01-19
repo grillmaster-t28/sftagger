@@ -7,9 +7,10 @@ VERSION = 4.0-a01
 PREFIX = /usr/local
 MANPREFIX = ${PREFIX}/share/man
 CFLAGS = -std=c11 -pedantic -Wall -O3 -l sqlite3
+DEBUG = -DDEBUG
 
 ${NAME}: ${NAME}.c
-	@${CC} -o ${NAME} ${CFLAGS} ${SRC}
+	@${CC} -o ${NAME} ${CFLAGS} ${DEBUG} ${SRC}
 	@strip -R .note -R .comment -R .eh_frame -R .eh_frame_hdr -s ${NAME}
 
 clean:
