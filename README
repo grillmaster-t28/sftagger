@@ -1,19 +1,19 @@
 sftagger - simple file tagging tool
 ===================================
-sftagger is a simple file tagging tool written in C
+sftagger is a simple file tagging tool written in C++
 
-Current Stable Version: 2018/03/31 (3.0 Release)
-Development Version: 2019-01-18 (4.0-a01)
+Current Stable Version: 2018/03/31 (3.0 Release (C version))
+Development Version: 2019-09-06 (4.0-a1)
 
 Always use the stable version over the development version as development 
 version are prone to breaking your "tags" file.
 
 Installation
 ------------
-Enter the following command to build and install sftagger 
-(if necessary as root):
+Enter the following commands to build and install sftagger:
 
-    $ make clean install
+    $ meson builddir/ && cd builddir/
+    $ ninja 
 
 Usage
 -----
@@ -21,7 +21,7 @@ Usage
 
 Depreciated commands (by 4.0)
 -----------------------------
-- All of them, now the commands are just using characters
+- To be decided
 
 Depreciated commands (by 2.0)
 -----------------------------
@@ -41,8 +41,9 @@ with your program of choice
 
 Dependencies
 ------------
-- libc (recommend: C99 and POSIX >= 200809)
+- libc++ (recommend: C++17)
 - [sqlite3](https://www.sqlite.org/index.html)
+- [sqlite_modern_cpp](https://github.com/SqliteModernCpp/sqlite_modern_cpp)
 
 Tested on
 ---------
