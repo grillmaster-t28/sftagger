@@ -1,9 +1,9 @@
 sftagger - simple file tagging tool
 ===================================
-sftagger is a simple file tagging tool written in C++
+sftagger is a simple file tagging tool written in C
 
 Current Stable Version: 2018/03/31 (3.0 Release (C version))
-Development Version: 2019-09-06 (4.0-a1)
+Development Version: 2020-02-07 (4.0-a1)
 
 Always use the stable version over the development version as development 
 version are prone to breaking your "tags" file.
@@ -41,9 +41,7 @@ with your program of choice
 
 Dependencies
 ------------
-- libc++ (recommend: C++17)
-- [sqlite3](https://www.sqlite.org/index.html)
-- [sqlite_modern_cpp](https://github.com/SqliteModernCpp/sqlite_modern_cpp)
+- libc (C89 and above are supported)
 
 Tested on
 ---------
@@ -63,6 +61,10 @@ TODO (For future releases)
 Changelog
 ---------
 - 4.0
+    - 2020-02-07
+        - sftagger rework
+            - C89 now
+            - Just some few setups
     - 2019-01-18 (4.0-a01)
         - complete sftagger rework
             - sqlite3 instead of flat files
