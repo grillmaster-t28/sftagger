@@ -29,20 +29,26 @@ strsame(const char *a, const char *b)
 	return 1;
 }
 
-/*
- * strucat - strcat but unsigned char and delimiates with SEP_ITEM (1)
- */
 void
-strucat(unsigned char *dest, const unsigned char *src)
+strucat(char *dest, const char *src)
 {
 	while (*dest)
 		++dest;
 
-	while (*dest++ = *src++)
+	/* Put in comma before concatenation */
+	*dest++ = ',';
+
+	while ((*dest++ = *src++) != '\0')
 		;
 
-	/* SEP_ITEM */
-	--dest;
-	*dest++ = 1;
+	*dest = '\0';
+}
+
+void
+strucpy(char *dest, const char *src)
+{
+	while ((*dest++ = *src++) != '\0')
+		;
+	*dest = '\0';
 }
 

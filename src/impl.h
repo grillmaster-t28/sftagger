@@ -2,7 +2,7 @@
 #define IMPL_H
 
 #define FILE_BUFFER_SIZE 	(256)
-#define MAX_TAGS_LEN		(1256)
+#define READ_BUFFER_SIZE	(1256)
 
 #define SEP_ITEM	1
 #define SEP_SEC		2
@@ -22,7 +22,8 @@ typedef struct {
 /* str.c */
 int strsize(const char *s);
 int strsame(const char *a, const char *b);
-void strucat(unsigned char *dest, const unsigned char *src);
+void strucat(char *dest, const char *src);
+void strucpy(char *dest, const char *src);
 
 /* file.c */
 const char *homedir(void);

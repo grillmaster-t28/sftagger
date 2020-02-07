@@ -1,32 +1,69 @@
 #include <stdio.h>
-#include <stdlib.h>
 
 #include "impl.h"
 #include "tagger.h"
 
-tagger *
-tagger_init(void)
+#define BUFFER_SIZE (2560+256)
+
+/* Compiler option */
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+
+static int 
+tagger_fileRead(tagger *t)
 {
-	tagger *t = malloc(sizeof(tagger));
+	char	file[256] = {0};
+	char	tags[2560] = {0};
+	char	buffer[BUFFER_SIZE] = {0};
+	unsigned int rc = BUFFER_SIZE;
+	unsigned int isFile = 1;
+	unsigned int si = 0;
+	unsigned int i;
 
-	t->fp = NULL;
-	setpath(t->path);
+	while (rc == BUFFER_SIZE)
+	{
+		rc = fread(buffer, 1, BUFFER_SIZE, t->fp);
 
-	return t;
+		for (i = 0; i < rc; ++i)
+		{
+			switch (buffer[i])
+			{
+			case 0:	/* End of file */
+				rc = 0;
+			case 1:	/* Mode switcher */
+				isFile = !isFile;
+
+				/* Both file and tags complete */
+				if (isFile)
+				{
+					tags[si] = '\0';
+					hmap_set(&(t->files_hm), file, tags);
+				}
+				else
+				{
+					file[si] = '\0';
+				}
+
+				si = 0;
+				break;
+			default:
+				if (isFile)
+				{
+					file[si++] = buffer[i];
+				}
+				else
+				{
+					tags[si++] = buffer[i];
+				}
+			}
+		}
+	}
+
+	return 0;
 }
 
-void
-tagger_deinit(tagger *t)
+static int
+tagger_fileInit(tagger *t)
 {
-	if (t->fp != NULL)
-		fclose(t->fp);
-}
-
-int
-tagger_add(tagger *t, char *arg)
-{
-	static int		isfile = 1;
-
 	if (t->fp == NULL)
 	{
 		/* First time init fp */
@@ -43,12 +80,64 @@ tagger_add(tagger *t, char *arg)
 		}
 	}
 
-	/*
-	 * strucat(tags, (unsigned char *) arg);
-	 * TODO
-	 */
-	printf("Added (%d): %s\n", isfile, arg);
+	return tagger_fileRead(t);
+}
+
+static inline char *
+tagger_isFileStr(int isFile)
+{
+	switch (isFile)
+	{
+	case 0:
+		return "Tags";
+	default:
+		return "File";
+	}
+}
+
+inline tagger
+tagger_init(void)
+{
+	tagger t = (const tagger){0};
+
+	setpath(t.path);
+
+	return t;
+}
+
+inline void
+tagger_deinit(tagger *t)
+{
+	if (t->fp != NULL)
+		fclose(t->fp);
+}
+
+int
+tagger_add(tagger *t, char *arg)
+{
+	static int	isfile = 1;
+	static char	file[256];
+
+	if (tagger_fileInit(t))
+		return 1;
+
+	if (isfile)
+	{
+		strucpy(file, arg);
+	}
+	else
+	{
+		hmap_setcat(&(t->files_hm), file, arg);
+	}
 	isfile = !isfile;
 
 	return 0;
 }
+
+int
+tagger_updateFile(tagger *t)
+{
+	hmap_print(&(t->files_hm));
+	return 0;
+}
+

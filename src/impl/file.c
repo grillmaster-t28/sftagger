@@ -35,8 +35,6 @@ create(void)
 	char path[256];
 	FILE *fp = NULL;
 	unsigned char content[] = {
-			/* Tags */
-		2,	/* Files */
 		3	/* End */
 	};
 

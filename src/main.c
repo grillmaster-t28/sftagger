@@ -15,10 +15,7 @@
 #define STATE_HELP		'h'
 #define STATE_VERSION		'v'
 
-/* Global variable */
-static tagger	*t;
-
-static int
+static inline int
 help(int retval)
 {
 	printf( "sftagger (" VERSION ")\n"
@@ -36,11 +33,10 @@ help(int retval)
 	return retval;
 }
 
-static int
+static inline void
 version(void)
 {
 	puts(VERSION);
-	return 0;
 }
 
 int
@@ -50,6 +46,7 @@ main(int argc, char **argv)
 	int 	i;
 	int	skip;
 	int	retval = 0;
+	tagger	t;
 
 	if (argc < 2)
 	{
@@ -103,7 +100,7 @@ main(int argc, char **argv)
 
 		/* Additional parameters puts in */
 		case STATE_ADD:
-			if (tagger_add(t, argv[i]))
+			if (tagger_add(&t, argv[i]))
 				retval = help(1);
 			break;
 		case STATE_REMOVE_FILES:
@@ -120,7 +117,7 @@ main(int argc, char **argv)
 			retval = help(0);
 			break;
 		case STATE_VERSION:
-			retval = version();
+			version();
 			break;
 		default:
 			fprintf(stderr, "ERROR: Option '%c' not found!\n", state);
@@ -131,7 +128,8 @@ main(int argc, char **argv)
 			break;
 	}
 
-	tagger_deinit(t);
+	tagger_updateFile(&t);
+	tagger_deinit(&t);
 
 	return retval;
 }
